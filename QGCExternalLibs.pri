@@ -55,7 +55,8 @@ isEmpty(MAVLINK_CONF) {
         message($$sprintf("Using user-supplied mavlink dialect '%1' specified in user_config.pri", $$MAVLINK_CONF))
     } else {
         #MAVLINK_CONF = ardupilotmega
-        MAVLINK_CONF = rcac_qgc
+        #MAVLINK_CONF = rcac_qgc
+	MAVLINK_CONF = rcac_qgc_gcs
     }
 }
 
