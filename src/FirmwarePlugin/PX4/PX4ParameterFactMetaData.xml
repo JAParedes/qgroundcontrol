@@ -5007,6 +5007,56 @@ the setpoint will be capped to MPC_XY_VEL_MAX</short_desc>
       <unit>deg/s</unit>
     </parameter>
   </group>
+	<group name="Multicopter RCAC Control">
+    <parameter default="1.0" name="MPC_ATT_ALPHA" type="FLOAT">
+      <short_desc>PID Attitude gain</short_desc>
+      <long_desc>Specifies gain applied to the PID attitude gains.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="1.0" name="MPC_POS_ALPHA" type="FLOAT">
+      <short_desc>PID Position gain</short_desc>
+      <long_desc>Specifies gain applied to the PID position gains.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="1.0" name="MPC_RATE_ALPHA" type="FLOAT">
+      <short_desc>PID Rate gain</short_desc>
+      <long_desc>Specifies gain applied to the PID rate gains.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="0.005" name="MPC_RCAC_POS_P0" type="FLOAT">
+      <short_desc>P0 for the position controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="1.0" name="MPC_RCAC_POS_SW" type="FLOAT">
+      <short_desc>RCAC Position switches</short_desc>
+      <long_desc>Specifies RCAC state.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="0.001" name="MPC_RCAC_VEL_P0" type="FLOAT">
+      <short_desc>P0 for the velocity controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="1.0" name="MPC_RCAC_VEL_SW" type="FLOAT">
+      <short_desc>RCAC Velocity switches</short_desc>
+      <long_desc>Specifies RCAC state.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="1.0" name="MPC_VEL_ALPHA" type="FLOAT">
+      <short_desc>PID Velocity gain</short_desc>
+      <long_desc>Specifies gain applied to the PID velocity gains.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+  </group>
   <group name="Multicopter Rate Control">
     <parameter default="0.69" name="MC_ACRO_EXPO" type="FLOAT">
       <short_desc>Acro mode Expo factor for Roll and Pitch</short_desc>
@@ -5197,6 +5247,30 @@ default 1.5 turns per second</short_desc>
       <min>0.0</min>
       <decimal>2</decimal>
       <increment>0.01</increment>
+    </parameter>
+	<parameter default="0.01" name="MPC_RCAC_ATT_P0" type="FLOAT">
+      <short_desc>P0 for the Attitude controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="-1.0" name="MPC_RCAC_ATT_SW" type="FLOAT">
+      <short_desc>RCAC Attitude switches</short_desc>
+      <long_desc>Specifies RCAC state.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="0.001" name="MPC_RCAC_RATE_P0" type="FLOAT">
+      <short_desc>P0 for the Rate controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="-1.0" name="MPC_RCAC_RATE_SW" type="FLOAT">
+      <short_desc>RCAC Rate switches</short_desc>
+      <long_desc>Specifies RCAC state.</long_desc>
+      <min>-10</min>
+      <max>10</max>
     </parameter>
   </group>
   <group name="OSD">
