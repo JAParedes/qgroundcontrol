@@ -37,62 +37,20 @@ static void mavlink_test_rcac_att_rate_variables(uint8_t system_id, uint8_t comp
         uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
         uint16_t i;
     mavlink_rcac_att_rate_variables_t packet_in = {
-        93372036854775807ULL,93372036854776311ULL,93372036854776815ULL,185.0,213.0,241.0,269.0,297.0,325.0,353.0,381.0,409.0,437.0,465.0,493.0,521.0,549.0,577.0,605.0,633.0,661.0,689.0,717.0,745.0,773.0,801.0,829.0,857.0,885.0,913.0,941.0,969.0,997.0,1025.0,1053.0,1081.0,1109.0,1137.0,1165.0,1193.0,1221.0,1249.0,1277.0,1305.0,1333.0,1361.0,1389.0,1417.0,1445.0,117,184
+        93372036854775807ULL,73.0,101.0,129.0,157.0,{ 185.0, 186.0, 187.0 },{ 269.0, 270.0, 271.0, 272.0, 273.0, 274.0, 275.0, 276.0, 277.0, 278.0, 279.0, 280.0 },1,68
     };
     mavlink_rcac_att_rate_variables_t packet1, packet2;
         memset(&packet1, 0, sizeof(packet1));
         packet1.timestamp = packet_in.timestamp;
-        packet1.ii_att = packet_in.ii_att;
-        packet1.ii_rate = packet_in.ii_rate;
         packet1.alpha_pid_att = packet_in.alpha_pid_att;
-        packet1.rcac_att_z_0 = packet_in.rcac_att_z_0;
-        packet1.rcac_att_z_1 = packet_in.rcac_att_z_1;
-        packet1.rcac_att_z_2 = packet_in.rcac_att_z_2;
-        packet1.rcac_att_u_0 = packet_in.rcac_att_u_0;
-        packet1.rcac_att_u_1 = packet_in.rcac_att_u_1;
-        packet1.rcac_att_u_2 = packet_in.rcac_att_u_2;
-        packet1.rcac_att_theta_0 = packet_in.rcac_att_theta_0;
-        packet1.rcac_att_theta_1 = packet_in.rcac_att_theta_1;
-        packet1.rcac_att_theta_2 = packet_in.rcac_att_theta_2;
         packet1.alpha_pid_rate = packet_in.alpha_pid_rate;
-        packet1.rcac_rate_z_0 = packet_in.rcac_rate_z_0;
-        packet1.rcac_rate_z_1 = packet_in.rcac_rate_z_1;
-        packet1.rcac_rate_z_2 = packet_in.rcac_rate_z_2;
-        packet1.rcac_rate_u_0 = packet_in.rcac_rate_u_0;
-        packet1.rcac_rate_u_1 = packet_in.rcac_rate_u_1;
-        packet1.rcac_rate_u_2 = packet_in.rcac_rate_u_2;
-        packet1.rcac_rate_theta_0 = packet_in.rcac_rate_theta_0;
-        packet1.rcac_rate_theta_1 = packet_in.rcac_rate_theta_1;
-        packet1.rcac_rate_theta_2 = packet_in.rcac_rate_theta_2;
-        packet1.rcac_rate_theta_3 = packet_in.rcac_rate_theta_3;
-        packet1.rcac_rate_theta_4 = packet_in.rcac_rate_theta_4;
-        packet1.rcac_rate_theta_5 = packet_in.rcac_rate_theta_5;
-        packet1.rcac_rate_theta_6 = packet_in.rcac_rate_theta_6;
-        packet1.rcac_rate_theta_7 = packet_in.rcac_rate_theta_7;
-        packet1.rcac_rate_theta_8 = packet_in.rcac_rate_theta_8;
-        packet1.rcac_rate_theta_9 = packet_in.rcac_rate_theta_9;
-        packet1.rcac_rate_theta_10 = packet_in.rcac_rate_theta_10;
-        packet1.rcac_rate_theta_11 = packet_in.rcac_rate_theta_11;
-        packet1.px4_att_theta_0 = packet_in.px4_att_theta_0;
-        packet1.px4_att_theta_1 = packet_in.px4_att_theta_1;
-        packet1.px4_att_theta_2 = packet_in.px4_att_theta_2;
-        packet1.px4_rate_theta_0 = packet_in.px4_rate_theta_0;
-        packet1.px4_rate_theta_1 = packet_in.px4_rate_theta_1;
-        packet1.px4_rate_theta_2 = packet_in.px4_rate_theta_2;
-        packet1.px4_rate_theta_3 = packet_in.px4_rate_theta_3;
-        packet1.px4_rate_theta_4 = packet_in.px4_rate_theta_4;
-        packet1.px4_rate_theta_5 = packet_in.px4_rate_theta_5;
-        packet1.px4_rate_theta_6 = packet_in.px4_rate_theta_6;
-        packet1.px4_rate_theta_7 = packet_in.px4_rate_theta_7;
-        packet1.px4_rate_theta_8 = packet_in.px4_rate_theta_8;
-        packet1.px4_rate_theta_9 = packet_in.px4_rate_theta_9;
-        packet1.px4_rate_theta_10 = packet_in.px4_rate_theta_10;
-        packet1.px4_rate_theta_11 = packet_in.px4_rate_theta_11;
         packet1.p11_att = packet_in.p11_att;
         packet1.p11_ratex = packet_in.p11_ratex;
         packet1.switch_att = packet_in.switch_att;
         packet1.switch_rate = packet_in.switch_rate;
         
+        mav_array_memcpy(packet1.rcac_att_theta, packet_in.rcac_att_theta, sizeof(float)*3);
+        mav_array_memcpy(packet1.rcac_rate_theta, packet_in.rcac_rate_theta, sizeof(float)*12);
         
 #ifdef MAVLINK_STATUS_FLAG_OUT_MAVLINK1
         if (status->flags & MAVLINK_STATUS_FLAG_OUT_MAVLINK1) {
@@ -106,12 +64,12 @@ static void mavlink_test_rcac_att_rate_variables(uint8_t system_id, uint8_t comp
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_rcac_att_rate_variables_pack(system_id, component_id, &msg , packet1.timestamp , packet1.ii_att , packet1.switch_att , packet1.alpha_pid_att , packet1.rcac_att_z_0 , packet1.rcac_att_z_1 , packet1.rcac_att_z_2 , packet1.rcac_att_u_0 , packet1.rcac_att_u_1 , packet1.rcac_att_u_2 , packet1.rcac_att_theta_0 , packet1.rcac_att_theta_1 , packet1.rcac_att_theta_2 , packet1.ii_rate , packet1.switch_rate , packet1.alpha_pid_rate , packet1.rcac_rate_z_0 , packet1.rcac_rate_z_1 , packet1.rcac_rate_z_2 , packet1.rcac_rate_u_0 , packet1.rcac_rate_u_1 , packet1.rcac_rate_u_2 , packet1.rcac_rate_theta_0 , packet1.rcac_rate_theta_1 , packet1.rcac_rate_theta_2 , packet1.rcac_rate_theta_3 , packet1.rcac_rate_theta_4 , packet1.rcac_rate_theta_5 , packet1.rcac_rate_theta_6 , packet1.rcac_rate_theta_7 , packet1.rcac_rate_theta_8 , packet1.rcac_rate_theta_9 , packet1.rcac_rate_theta_10 , packet1.rcac_rate_theta_11 , packet1.px4_att_theta_0 , packet1.px4_att_theta_1 , packet1.px4_att_theta_2 , packet1.px4_rate_theta_0 , packet1.px4_rate_theta_1 , packet1.px4_rate_theta_2 , packet1.px4_rate_theta_3 , packet1.px4_rate_theta_4 , packet1.px4_rate_theta_5 , packet1.px4_rate_theta_6 , packet1.px4_rate_theta_7 , packet1.px4_rate_theta_8 , packet1.px4_rate_theta_9 , packet1.px4_rate_theta_10 , packet1.px4_rate_theta_11 , packet1.p11_att , packet1.p11_ratex );
+    mavlink_msg_rcac_att_rate_variables_pack(system_id, component_id, &msg , packet1.timestamp , packet1.switch_att , packet1.switch_rate , packet1.alpha_pid_att , packet1.alpha_pid_rate , packet1.p11_att , packet1.p11_ratex , packet1.rcac_att_theta , packet1.rcac_rate_theta );
     mavlink_msg_rcac_att_rate_variables_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_rcac_att_rate_variables_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.timestamp , packet1.ii_att , packet1.switch_att , packet1.alpha_pid_att , packet1.rcac_att_z_0 , packet1.rcac_att_z_1 , packet1.rcac_att_z_2 , packet1.rcac_att_u_0 , packet1.rcac_att_u_1 , packet1.rcac_att_u_2 , packet1.rcac_att_theta_0 , packet1.rcac_att_theta_1 , packet1.rcac_att_theta_2 , packet1.ii_rate , packet1.switch_rate , packet1.alpha_pid_rate , packet1.rcac_rate_z_0 , packet1.rcac_rate_z_1 , packet1.rcac_rate_z_2 , packet1.rcac_rate_u_0 , packet1.rcac_rate_u_1 , packet1.rcac_rate_u_2 , packet1.rcac_rate_theta_0 , packet1.rcac_rate_theta_1 , packet1.rcac_rate_theta_2 , packet1.rcac_rate_theta_3 , packet1.rcac_rate_theta_4 , packet1.rcac_rate_theta_5 , packet1.rcac_rate_theta_6 , packet1.rcac_rate_theta_7 , packet1.rcac_rate_theta_8 , packet1.rcac_rate_theta_9 , packet1.rcac_rate_theta_10 , packet1.rcac_rate_theta_11 , packet1.px4_att_theta_0 , packet1.px4_att_theta_1 , packet1.px4_att_theta_2 , packet1.px4_rate_theta_0 , packet1.px4_rate_theta_1 , packet1.px4_rate_theta_2 , packet1.px4_rate_theta_3 , packet1.px4_rate_theta_4 , packet1.px4_rate_theta_5 , packet1.px4_rate_theta_6 , packet1.px4_rate_theta_7 , packet1.px4_rate_theta_8 , packet1.px4_rate_theta_9 , packet1.px4_rate_theta_10 , packet1.px4_rate_theta_11 , packet1.p11_att , packet1.p11_ratex );
+    mavlink_msg_rcac_att_rate_variables_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.timestamp , packet1.switch_att , packet1.switch_rate , packet1.alpha_pid_att , packet1.alpha_pid_rate , packet1.p11_att , packet1.p11_ratex , packet1.rcac_att_theta , packet1.rcac_rate_theta );
     mavlink_msg_rcac_att_rate_variables_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
@@ -124,7 +82,7 @@ static void mavlink_test_rcac_att_rate_variables(uint8_t system_id, uint8_t comp
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
         
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_rcac_att_rate_variables_send(MAVLINK_COMM_1 , packet1.timestamp , packet1.ii_att , packet1.switch_att , packet1.alpha_pid_att , packet1.rcac_att_z_0 , packet1.rcac_att_z_1 , packet1.rcac_att_z_2 , packet1.rcac_att_u_0 , packet1.rcac_att_u_1 , packet1.rcac_att_u_2 , packet1.rcac_att_theta_0 , packet1.rcac_att_theta_1 , packet1.rcac_att_theta_2 , packet1.ii_rate , packet1.switch_rate , packet1.alpha_pid_rate , packet1.rcac_rate_z_0 , packet1.rcac_rate_z_1 , packet1.rcac_rate_z_2 , packet1.rcac_rate_u_0 , packet1.rcac_rate_u_1 , packet1.rcac_rate_u_2 , packet1.rcac_rate_theta_0 , packet1.rcac_rate_theta_1 , packet1.rcac_rate_theta_2 , packet1.rcac_rate_theta_3 , packet1.rcac_rate_theta_4 , packet1.rcac_rate_theta_5 , packet1.rcac_rate_theta_6 , packet1.rcac_rate_theta_7 , packet1.rcac_rate_theta_8 , packet1.rcac_rate_theta_9 , packet1.rcac_rate_theta_10 , packet1.rcac_rate_theta_11 , packet1.px4_att_theta_0 , packet1.px4_att_theta_1 , packet1.px4_att_theta_2 , packet1.px4_rate_theta_0 , packet1.px4_rate_theta_1 , packet1.px4_rate_theta_2 , packet1.px4_rate_theta_3 , packet1.px4_rate_theta_4 , packet1.px4_rate_theta_5 , packet1.px4_rate_theta_6 , packet1.px4_rate_theta_7 , packet1.px4_rate_theta_8 , packet1.px4_rate_theta_9 , packet1.px4_rate_theta_10 , packet1.px4_rate_theta_11 , packet1.p11_att , packet1.p11_ratex );
+    mavlink_msg_rcac_att_rate_variables_send(MAVLINK_COMM_1 , packet1.timestamp , packet1.switch_att , packet1.switch_rate , packet1.alpha_pid_att , packet1.alpha_pid_rate , packet1.p11_att , packet1.p11_ratex , packet1.rcac_att_theta , packet1.rcac_rate_theta );
     mavlink_msg_rcac_att_rate_variables_decode(last_msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 }
@@ -141,55 +99,22 @@ static void mavlink_test_rcac_pos_vel_variables(uint8_t system_id, uint8_t compo
         uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
         uint16_t i;
     mavlink_rcac_pos_vel_variables_t packet_in = {
-        93372036854775807ULL,93372036854776311ULL,93372036854776815ULL,185.0,213.0,241.0,269.0,297.0,325.0,353.0,381.0,409.0,437.0,465.0,493.0,521.0,549.0,577.0,605.0,633.0,661.0,689.0,717.0,745.0,773.0,801.0,829.0,857.0,885.0,913.0,941.0,969.0,997.0,1025.0,1053.0,1081.0,1109.0,1137.0,1165.0,1193.0,1221.0,1249.0,33,100
+        93372036854775807ULL,73.0,101.0,129.0,157.0,185.0,213.0,{ 241.0, 242.0, 243.0 },{ 325.0, 326.0, 327.0, 328.0, 329.0, 330.0, 331.0, 332.0, 333.0 },245,56
     };
     mavlink_rcac_pos_vel_variables_t packet1, packet2;
         memset(&packet1, 0, sizeof(packet1));
         packet1.timestamp = packet_in.timestamp;
-        packet1.ii_pos = packet_in.ii_pos;
-        packet1.ii_vel = packet_in.ii_vel;
         packet1.pid_factor = packet_in.pid_factor;
         packet1.rcac_master_sw = packet_in.rcac_master_sw;
         packet1.alpha_pid_pos = packet_in.alpha_pid_pos;
-        packet1.rcac_pos_z_0 = packet_in.rcac_pos_z_0;
-        packet1.rcac_pos_z_1 = packet_in.rcac_pos_z_1;
-        packet1.rcac_pos_z_2 = packet_in.rcac_pos_z_2;
-        packet1.rcac_pos_u_0 = packet_in.rcac_pos_u_0;
-        packet1.rcac_pos_u_1 = packet_in.rcac_pos_u_1;
-        packet1.rcac_pos_u_2 = packet_in.rcac_pos_u_2;
-        packet1.rcac_pos_theta_0 = packet_in.rcac_pos_theta_0;
-        packet1.rcac_pos_theta_1 = packet_in.rcac_pos_theta_1;
-        packet1.rcac_pos_theta_2 = packet_in.rcac_pos_theta_2;
         packet1.alpha_pid_vel = packet_in.alpha_pid_vel;
-        packet1.rcac_vel_z_0 = packet_in.rcac_vel_z_0;
-        packet1.rcac_vel_z_1 = packet_in.rcac_vel_z_1;
-        packet1.rcac_vel_z_2 = packet_in.rcac_vel_z_2;
-        packet1.rcac_vel_u_0 = packet_in.rcac_vel_u_0;
-        packet1.rcac_vel_u_1 = packet_in.rcac_vel_u_1;
-        packet1.rcac_vel_u_2 = packet_in.rcac_vel_u_2;
-        packet1.rcac_vel_theta_0 = packet_in.rcac_vel_theta_0;
-        packet1.rcac_vel_theta_1 = packet_in.rcac_vel_theta_1;
-        packet1.rcac_vel_theta_2 = packet_in.rcac_vel_theta_2;
-        packet1.rcac_vel_theta_3 = packet_in.rcac_vel_theta_3;
-        packet1.rcac_vel_theta_4 = packet_in.rcac_vel_theta_4;
-        packet1.rcac_vel_theta_5 = packet_in.rcac_vel_theta_5;
-        packet1.rcac_vel_theta_6 = packet_in.rcac_vel_theta_6;
-        packet1.rcac_vel_theta_7 = packet_in.rcac_vel_theta_7;
-        packet1.rcac_vel_theta_8 = packet_in.rcac_vel_theta_8;
-        packet1.px4_ol_theta_0 = packet_in.px4_ol_theta_0;
-        packet1.px4_ol_theta_1 = packet_in.px4_ol_theta_1;
-        packet1.px4_ol_theta_2 = packet_in.px4_ol_theta_2;
-        packet1.px4_ol_theta_3 = packet_in.px4_ol_theta_3;
-        packet1.px4_ol_theta_4 = packet_in.px4_ol_theta_4;
-        packet1.px4_ol_theta_5 = packet_in.px4_ol_theta_5;
-        packet1.px4_ol_theta_6 = packet_in.px4_ol_theta_6;
-        packet1.px4_ol_theta_7 = packet_in.px4_ol_theta_7;
-        packet1.px4_ol_theta_8 = packet_in.px4_ol_theta_8;
         packet1.p11_pos = packet_in.p11_pos;
         packet1.p11_velx = packet_in.p11_velx;
         packet1.switch_pos = packet_in.switch_pos;
         packet1.switch_vel = packet_in.switch_vel;
         
+        mav_array_memcpy(packet1.rcac_pos_theta, packet_in.rcac_pos_theta, sizeof(float)*3);
+        mav_array_memcpy(packet1.rcac_vel_theta, packet_in.rcac_vel_theta, sizeof(float)*9);
         
 #ifdef MAVLINK_STATUS_FLAG_OUT_MAVLINK1
         if (status->flags & MAVLINK_STATUS_FLAG_OUT_MAVLINK1) {
@@ -203,12 +128,12 @@ static void mavlink_test_rcac_pos_vel_variables(uint8_t system_id, uint8_t compo
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_rcac_pos_vel_variables_pack(system_id, component_id, &msg , packet1.timestamp , packet1.pid_factor , packet1.rcac_master_sw , packet1.ii_pos , packet1.switch_pos , packet1.alpha_pid_pos , packet1.rcac_pos_z_0 , packet1.rcac_pos_z_1 , packet1.rcac_pos_z_2 , packet1.rcac_pos_u_0 , packet1.rcac_pos_u_1 , packet1.rcac_pos_u_2 , packet1.rcac_pos_theta_0 , packet1.rcac_pos_theta_1 , packet1.rcac_pos_theta_2 , packet1.ii_vel , packet1.switch_vel , packet1.alpha_pid_vel , packet1.rcac_vel_z_0 , packet1.rcac_vel_z_1 , packet1.rcac_vel_z_2 , packet1.rcac_vel_u_0 , packet1.rcac_vel_u_1 , packet1.rcac_vel_u_2 , packet1.rcac_vel_theta_0 , packet1.rcac_vel_theta_1 , packet1.rcac_vel_theta_2 , packet1.rcac_vel_theta_3 , packet1.rcac_vel_theta_4 , packet1.rcac_vel_theta_5 , packet1.rcac_vel_theta_6 , packet1.rcac_vel_theta_7 , packet1.rcac_vel_theta_8 , packet1.px4_ol_theta_0 , packet1.px4_ol_theta_1 , packet1.px4_ol_theta_2 , packet1.px4_ol_theta_3 , packet1.px4_ol_theta_4 , packet1.px4_ol_theta_5 , packet1.px4_ol_theta_6 , packet1.px4_ol_theta_7 , packet1.px4_ol_theta_8 , packet1.p11_pos , packet1.p11_velx );
+    mavlink_msg_rcac_pos_vel_variables_pack(system_id, component_id, &msg , packet1.timestamp , packet1.pid_factor , packet1.rcac_master_sw , packet1.switch_pos , packet1.switch_vel , packet1.alpha_pid_pos , packet1.alpha_pid_vel , packet1.p11_pos , packet1.p11_velx , packet1.rcac_pos_theta , packet1.rcac_vel_theta );
     mavlink_msg_rcac_pos_vel_variables_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_rcac_pos_vel_variables_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.timestamp , packet1.pid_factor , packet1.rcac_master_sw , packet1.ii_pos , packet1.switch_pos , packet1.alpha_pid_pos , packet1.rcac_pos_z_0 , packet1.rcac_pos_z_1 , packet1.rcac_pos_z_2 , packet1.rcac_pos_u_0 , packet1.rcac_pos_u_1 , packet1.rcac_pos_u_2 , packet1.rcac_pos_theta_0 , packet1.rcac_pos_theta_1 , packet1.rcac_pos_theta_2 , packet1.ii_vel , packet1.switch_vel , packet1.alpha_pid_vel , packet1.rcac_vel_z_0 , packet1.rcac_vel_z_1 , packet1.rcac_vel_z_2 , packet1.rcac_vel_u_0 , packet1.rcac_vel_u_1 , packet1.rcac_vel_u_2 , packet1.rcac_vel_theta_0 , packet1.rcac_vel_theta_1 , packet1.rcac_vel_theta_2 , packet1.rcac_vel_theta_3 , packet1.rcac_vel_theta_4 , packet1.rcac_vel_theta_5 , packet1.rcac_vel_theta_6 , packet1.rcac_vel_theta_7 , packet1.rcac_vel_theta_8 , packet1.px4_ol_theta_0 , packet1.px4_ol_theta_1 , packet1.px4_ol_theta_2 , packet1.px4_ol_theta_3 , packet1.px4_ol_theta_4 , packet1.px4_ol_theta_5 , packet1.px4_ol_theta_6 , packet1.px4_ol_theta_7 , packet1.px4_ol_theta_8 , packet1.p11_pos , packet1.p11_velx );
+    mavlink_msg_rcac_pos_vel_variables_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.timestamp , packet1.pid_factor , packet1.rcac_master_sw , packet1.switch_pos , packet1.switch_vel , packet1.alpha_pid_pos , packet1.alpha_pid_vel , packet1.p11_pos , packet1.p11_velx , packet1.rcac_pos_theta , packet1.rcac_vel_theta );
     mavlink_msg_rcac_pos_vel_variables_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
@@ -221,7 +146,7 @@ static void mavlink_test_rcac_pos_vel_variables(uint8_t system_id, uint8_t compo
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
         
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_rcac_pos_vel_variables_send(MAVLINK_COMM_1 , packet1.timestamp , packet1.pid_factor , packet1.rcac_master_sw , packet1.ii_pos , packet1.switch_pos , packet1.alpha_pid_pos , packet1.rcac_pos_z_0 , packet1.rcac_pos_z_1 , packet1.rcac_pos_z_2 , packet1.rcac_pos_u_0 , packet1.rcac_pos_u_1 , packet1.rcac_pos_u_2 , packet1.rcac_pos_theta_0 , packet1.rcac_pos_theta_1 , packet1.rcac_pos_theta_2 , packet1.ii_vel , packet1.switch_vel , packet1.alpha_pid_vel , packet1.rcac_vel_z_0 , packet1.rcac_vel_z_1 , packet1.rcac_vel_z_2 , packet1.rcac_vel_u_0 , packet1.rcac_vel_u_1 , packet1.rcac_vel_u_2 , packet1.rcac_vel_theta_0 , packet1.rcac_vel_theta_1 , packet1.rcac_vel_theta_2 , packet1.rcac_vel_theta_3 , packet1.rcac_vel_theta_4 , packet1.rcac_vel_theta_5 , packet1.rcac_vel_theta_6 , packet1.rcac_vel_theta_7 , packet1.rcac_vel_theta_8 , packet1.px4_ol_theta_0 , packet1.px4_ol_theta_1 , packet1.px4_ol_theta_2 , packet1.px4_ol_theta_3 , packet1.px4_ol_theta_4 , packet1.px4_ol_theta_5 , packet1.px4_ol_theta_6 , packet1.px4_ol_theta_7 , packet1.px4_ol_theta_8 , packet1.p11_pos , packet1.p11_velx );
+    mavlink_msg_rcac_pos_vel_variables_send(MAVLINK_COMM_1 , packet1.timestamp , packet1.pid_factor , packet1.rcac_master_sw , packet1.switch_pos , packet1.switch_vel , packet1.alpha_pid_pos , packet1.alpha_pid_vel , packet1.p11_pos , packet1.p11_velx , packet1.rcac_pos_theta , packet1.rcac_vel_theta );
     mavlink_msg_rcac_pos_vel_variables_decode(last_msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 }
