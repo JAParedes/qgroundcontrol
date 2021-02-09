@@ -15,6 +15,7 @@
 
 #include <QObject>
 #include <QGeoCoordinate>
+#include <QGeoRectangle>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QTimer>
@@ -119,8 +120,10 @@ public:
     void addPathQuery               (TerrainOfflineAirMapQuery* terrainQueryInterface, const QGeoCoordinate& startPoint, const QGeoCoordinate& endPoint);
     bool getAltitudesForCoordinates (const QList<QGeoCoordinate>& coordinates, QList<double>& altitudes, bool& error);
 
+    static QList<QGeoCoordinate> pathQueryToCoords(const QGeoCoordinate& fromCoord, const QGeoCoordinate& toCoord, double& distanceBetween, double& finalDistanceBetween);
+
 private slots:
-    void _terrainDone       (QByteArray responseBytes, QNetworkReply::NetworkError error);
+    void _terrainDone(QByteArray responseBytes, QNetworkReply::NetworkError error);
 
 private:
     enum class State {
@@ -294,3 +297,64 @@ private:
     QList<TerrainPathQuery::PathHeightInfo_t>   _rgPathHeightInfo;
     TerrainPathQuery                            _pathQuery;
 };
+
+/// @brief Provides unit test terrain query responses.
+/// @details It provides preset, emulated, 1 arc-second (SRTM1) resolution regions that are either
+/// flat or sloped in a fashion that aids testing terrain-sensitive functionality. All emulated
+/// regions are positioned around Point Nemo - should real terrain became useful and checked in one day.
+class UnitTestTerrainQuery : public TerrainQueryInterface {
+public:
+
+    static constexpr double regionSizeDeg   = 0.1;      // all regions are 0.1deg (~11km) square
+    static constexpr double one_second_deg  = 1.0/3600;
+
+    /// Point Nemo is a point on Earth furthest from land
+    static const QGeoCoordinate pointNemo;
+
+    /// Region with constant 10m terrain elevation
+    struct Flat10Region : public QGeoRectangle
+    {
+        Flat10Region(const QGeoRectangle& region)
+            : QGeoRectangle(region)
+        {
+
+        }
+
+        static const double amslElevation;
+    };
+    static const Flat10Region flat10Region;
+
+    /// Region with a linear west to east slope raising at a rate of 100 meters per kilometer (-100m to 1000m)
+    struct LinearSlopeRegion : public QGeoRectangle
+    {
+        LinearSlopeRegion(const QGeoRectangle& region)
+            : QGeoRectangle(region)
+        {
+
+        }
+
+        static const double minAMSLElevation;
+        static const double maxAMSLElevation;
+        static const double totalElevationChange;
+    };
+    static const LinearSlopeRegion linearSlopeRegion;
+
+    UnitTestTerrainQuery(TerrainQueryInterface* parent = nullptr);
+
+    // Overrides from TerrainQueryInterface
+    void requestCoordinateHeights   (const QList<QGeoCoordinate>& coordinates) override;
+    void requestPathHeights         (const QGeoCoordinate& fromCoord, const QGeoCoordinate& toCoord) override;
+    void requestCarpetHeights       (const QGeoCoordinate& swCoord, const QGeoCoordinate& neCoord, bool statsOnly) override;
+
+private:
+    typedef struct {
+        QList<QGeoCoordinate>   rgCoords;
+        QList<double>           rgHeights;
+        double                  distanceBetween;
+        double                  finalDistanceBetween;
+    } PathHeightInfo_t;
+
+    QList<double> _requestCoordinateHeights(const QList<QGeoCoordinate>& coordinates);
+    PathHeightInfo_t _requestPathHeights(const QGeoCoordinate& fromCoord, const QGeoCoordinate& toCoord);
+};
+

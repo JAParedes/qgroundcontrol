@@ -294,34 +294,21 @@ QString QGCSerialPortInfo::_boardTypeToString(BoardType_t boardType)
 
 QList<QGCSerialPortInfo> QGCSerialPortInfo::availablePorts(void)
 {
-    // Cube Orange/Yellow are composite devices which expose two usb ports over a single usb connection.
-    // The first port is the mavlink connection, the second is the SLCAN connection by default.
-    // We don't expose the second port as being available to QGC.
+    typedef QPair<quint16, quint16> VidPidPair_t;
 
-    static const int hexCubeVID = 11694;
-    static const int hexCubeOrangePID = 4118;
-    static const int hexCubeYellowPID = 4114;
+    QList<QGCSerialPortInfo>        list;
+    QMap<VidPidPair_t, QStringList> seenSerialNumbers;
 
-    bool cubeOrangeAlreadySeen = false;
-    bool cubeYellowAlreadySeen = false;
-
-    QList<QGCSerialPortInfo>    list;
-
-    for(QSerialPortInfo portInfo: QSerialPortInfo::availablePorts()) {
+    for (QSerialPortInfo portInfo: QSerialPortInfo::availablePorts()) {
         if (!isSystemPort(&portInfo)) {
-            if (portInfo.vendorIdentifier() == hexCubeVID && portInfo.productIdentifier() == hexCubeOrangePID) {
-                if (cubeOrangeAlreadySeen) {
+            if (portInfo.hasVendorIdentifier() && portInfo.hasProductIdentifier() && !portInfo.serialNumber().isEmpty() && portInfo.serialNumber() != "0") {
+                VidPidPair_t vidPid(portInfo.vendorIdentifier(), portInfo.productIdentifier());
+                if (seenSerialNumbers.contains(vidPid) && seenSerialNumbers[vidPid].contains(portInfo.serialNumber())) {
+                    // Some boards are a composite USB device, with the first port being mavlink and the second something else. We only expose to first mavlink port.
+                    qCDebug(QGCSerialPortInfoLog) << "Skipping secondary port on same device" << portInfo.portName() << portInfo.vendorIdentifier() << portInfo.productIdentifier() << portInfo.serialNumber();
                     continue;
                 }
-                qCDebug(QGCSerialPortInfoLog) << "Skipping secondary port on Cube Orange" << portInfo.portName();
-                cubeOrangeAlreadySeen = true;
-            }
-            if (portInfo.vendorIdentifier() == hexCubeVID && portInfo.productIdentifier() == hexCubeYellowPID) {
-                if (cubeYellowAlreadySeen) {
-                    continue;
-                }
-                qCDebug(QGCSerialPortInfoLog) << "Skipping secondary port on Cube Yellow" << portInfo.portName();
-                cubeYellowAlreadySeen = true;
+                seenSerialNumbers[vidPid].append(portInfo.serialNumber());
             }
             list << *((QGCSerialPortInfo*)&portInfo);
         }

@@ -59,12 +59,12 @@ Item {
         //-------------------------------------------------------------
         QGCLabel {
             text:               qsTr("Allow negative Thrust")
-            visible:            activeVehicle.supportsNegativeThrust
+            visible:            globals.activeVehicle.supportsNegativeThrust
             Layout.alignment:   Qt.AlignVCenter
         }
         QGCCheckBox {
-            visible:            activeVehicle.supportsNegativeThrust
-            enabled:            _activeJoystick.negativeThrust = activeVehicle.supportsNegativeThrust
+            visible:            globals.activeVehicle.supportsNegativeThrust
+            enabled:            _activeJoystick.negativeThrust = globals.activeVehicle.supportsNegativeThrust
             checked:            _activeJoystick ? _activeJoystick.negativeThrust : false
             onClicked:          _activeJoystick.negativeThrust = checked
         }
@@ -96,34 +96,10 @@ Item {
         }
         QGCCheckBox {
             id:         advancedSettings
-            checked:    activeVehicle.joystickMode !== 0
+            checked:    globals.activeVehicle.joystickMode !== 0
             onClicked: {
                 if (!checked) {
-                    activeVehicle.joystickMode = 0
-                }
-            }
-        }
-        //---------------------------------------------------------------------
-        //-- Enable Gimbal
-        QGCLabel {
-            text:               qsTr("Enable gimbal control (Experimental)")
-            visible:            advancedSettings.checked
-            Layout.alignment:   Qt.AlignVCenter
-        }
-        QGCCheckBox {
-            id:                 enabledGimbal
-            visible:            advancedSettings.checked
-            enabled:            _activeJoystick
-            onClicked:          _activeJoystick.gimbalEnabled = checked
-            Component.onCompleted: {
-                checked = _activeJoystick.gimbalEnabled
-            }
-            Connections {
-                target: joystickManager
-                onActiveJoystickChanged: {
-                    if(_activeJoystick) {
-                        enabledGimbal.checked = Qt.binding(function() { return _activeJoystick.gimbalEnabled })
-                    }
+                    globals.activeVehicle.joystickMode = 0
                 }
             }
         }
@@ -135,13 +111,13 @@ Item {
             visible:            advancedSettings.checked
         }
         QGCTextField {
-            text:               _activeJoystick.axisFrequency
+            text:               _activeJoystick.axisFrequencyHz
             enabled:            advancedSettings.checked
-            validator:          DoubleValidator { bottom: 0.25; top: 50.0; }
+            validator:          DoubleValidator { bottom: _activeJoystick.minAxisFrequencyHz; top: _activeJoystick.maxAxisFrequencyHz; }
             inputMethodHints:   Qt.ImhFormattedNumbersOnly
             Layout.alignment:   Qt.AlignVCenter
             onEditingFinished: {
-                _activeJoystick.axisFrequency = parseFloat(text)
+                _activeJoystick.axisFrequencyHz = parseFloat(text)
             }
             visible:            advancedSettings.checked
         }
@@ -153,13 +129,13 @@ Item {
             visible:            advancedSettings.checked
         }
         QGCTextField {
-            text:               _activeJoystick.buttonFrequency
+            text:               _activeJoystick.buttonFrequencyHz
             enabled:            advancedSettings.checked
-            validator:          DoubleValidator { bottom: 0.25; top: 50.0; }
+            validator:          DoubleValidator { bottom: _activeJoystick.minButtonFrequencyHz; top: _activeJoystick.maxButtonFrequencyHz; }
             inputMethodHints:   Qt.ImhFormattedNumbersOnly
             Layout.alignment:   Qt.AlignVCenter
             onEditingFinished: {
-                _activeJoystick.buttonFrequency = parseFloat(text)
+                _activeJoystick.buttonFrequencyHz = parseFloat(text)
             }
             visible:            advancedSettings.checked
         }
@@ -171,7 +147,7 @@ Item {
             visible:            advancedSettings.checked
         }
         QGCCheckBox {
-            checked:            activeVehicle.joystickMode !== 0
+            checked:            globals.activeVehicle.joystickMode !== 0
             enabled:            advancedSettings.checked
             Component.onCompleted: {
                 checked = _activeJoystick.circleCorrection

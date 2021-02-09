@@ -65,8 +65,8 @@ UrlFactory::UrlFactory() : _timeout(5 * 1000) {
     _providersTable["Mapbox Hybrid"]       = new MapboxHybridMapProvider(this);
     _providersTable["Mapbox StreetsBasic"] = new MapboxStreetsBasicMapProvider(this);
     _providersTable["Mapbox Outdoors"]     = new MapboxOutdoorsMapProvider(this);
-    _providersTable["Mapbox RunBikeHike"]  = new MapboxRunBikeHikeMapProvider(this);
-    _providersTable["Mapbox HighContrast"] = new MapboxHighContrastMapProvider(this);
+    _providersTable["Mapbox Bright"]       = new MapboxBrightMapProvider(this);
+    _providersTable["Mapbox Custom"]       = new MapboxCustomMapProvider(this);
 
     //_providersTable["MapQuest Map"] = new MapQuestMapMapProvider(this);
     //_providersTable["MapQuest Sat"] = new MapQuestSatMapProvider(this);
@@ -75,6 +75,12 @@ UrlFactory::UrlFactory() : _timeout(5 * 1000) {
     _providersTable["VWorld Satellite Map"] = new VWorldSatMapProvider(this);
 
     _providersTable["Airmap Elevation"] = new AirmapElevationProvider(this);
+
+    _providersTable["Japan-GSI Contour"] = new JapanStdMapProvider(this);
+    _providersTable["Japan-GSI Seamless"] = new JapanSeamlessMapProvider(this);
+    _providersTable["Japan-GSI Anaglyph"] = new JapanAnaglyphMapProvider(this);
+    _providersTable["Japan-GSI Slope"] = new JapanSlopeMapProvider(this);
+    _providersTable["Japan-GSI Relief"] = new JapanReliefMapProvider(this);
 }
 
 void UrlFactory::registerProvider(QString name, MapProvider* provider) {
@@ -153,6 +159,17 @@ QString UrlFactory::getTypeFromId(int id) {
     }
     qCDebug(QGCMapUrlEngineLog) << "getTypeFromId : id not found" << id;
     return "";
+}
+
+MapProvider* UrlFactory::getMapProviderFromId(int id)
+{
+    QString type = getTypeFromId(id);
+    if (!type.isEmpty()) {
+        if (_providersTable.find(type) != _providersTable.end()) {
+            return _providersTable[type];
+        }
+    }
+    return nullptr;
 }
 
 // Todo : qHash produce a uint bigger than max(int)

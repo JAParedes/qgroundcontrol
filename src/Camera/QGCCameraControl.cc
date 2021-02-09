@@ -387,10 +387,7 @@ QGCCameraControl::takePhoto()
             _captureInfoRetries = 0;
             //-- Capture local image as well
             if(qgcApp()->toolbox()->videoManager()) {
-                QString photoPath = qgcApp()->toolbox()->settingsManager()->appSettings()->savePath()->rawValue().toString() + QStringLiteral("/Photo");
-                QDir().mkpath(photoPath);
-                photoPath += + "/" + QDateTime::currentDateTime().toString("yyyy-MM-dd_hh.mm.ss.zzz") + ".jpg";
-                qgcApp()->toolbox()->videoManager()->grabImage(photoPath);
+                qgcApp()->toolbox()->videoManager()->grabImage();
             }
             return true;
         }
@@ -782,7 +779,7 @@ QGCCameraControl::_setVideoStatus(VideoStatus status)
 void
 QGCCameraControl::_recTimerHandler()
 {
-    _recordTime = static_cast<uint32_t>(_recTime.msec());
+    _recordTime = static_cast<uint32_t>(_recTime.msecsTo(QTime::currentTime()));
     emit recordTimeChanged();
 }
 
@@ -1174,16 +1171,22 @@ QGCCameraControl::_requestAllParameters()
             qCritical() << "QGCParamIO is NULL" << paramName;
         }
     }
-    MAVLinkProtocol* mavlink = qgcApp()->toolbox()->mavlinkProtocol();
-    mavlink_message_t msg;
-    mavlink_msg_param_ext_request_list_pack_chan(
-        static_cast<uint8_t>(mavlink->getSystemId()),
-        static_cast<uint8_t>(mavlink->getComponentId()),
-        _vehicle->priorityLink()->mavlinkChannel(),
-        &msg,
-        static_cast<uint8_t>(_vehicle->id()),
-        static_cast<uint8_t>(compID()));
-    _vehicle->sendMessageOnLinkThreadSafe(_vehicle->priorityLink(), msg);
+    WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
+    if (!weakLink.expired()) {
+        SharedLinkInterfacePtr sharedLink = weakLink.lock();
+
+        MAVLinkProtocol* mavlink = qgcApp()->toolbox()->mavlinkProtocol();
+        mavlink_message_t msg;
+        mavlink_msg_param_ext_request_list_pack_chan(
+                    static_cast<uint8_t>(mavlink->getSystemId()),
+                    static_cast<uint8_t>(mavlink->getComponentId()),
+                    sharedLink->mavlinkChannel(),
+                    &msg,
+                    static_cast<uint8_t>(_vehicle->id()),
+                    static_cast<uint8_t>(compID()),
+                    0);                                                 // trimmed messages = false
+        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
+    }
     qCDebug(CameraControlVerboseLog) << "Request all parameters";
 }
 
@@ -1534,8 +1537,9 @@ QGCCameraControl::handleCaptureStatus(const mavlink_camera_capture_status_t& cap
     }
     //-- Do we have recording time?
     if(cap.recording_time_ms) {
+        // Resync our _recTime timer to the time info received from the camera component
         _recordTime = cap.recording_time_ms;
-        _recTime = _recTime.addMSecs(_recTime.msec() - static_cast<int>(cap.recording_time_ms));
+        _recTime = _recTime.addMSecs(_recTime.msecsTo(QTime::currentTime()) - static_cast<int>(cap.recording_time_ms));
         emit recordTimeChanged();
     }
     //-- Video/Image Capture Status
@@ -1590,7 +1594,7 @@ QGCCameraControl::handleVideoInfo(const mavlink_video_stream_information_t* vi)
         qCDebug(CameraControlLog) << "All stream handlers done";
         _streamInfoTimer.stop();
         emit autoStreamChanged();
-        emit _vehicle->dynamicCameras()->streamChanged();
+        emit _vehicle->cameraManager()->streamChanged();
     }
 }
 
@@ -1636,7 +1640,7 @@ QGCCameraControl::setCurrentStream(int stream)
                 _requestStreamStatus(static_cast<uint8_t>(pInfo->streamID()));
             }
             emit currentStreamChanged();
-            emit _vehicle->dynamicCameras()->streamChanged();
+            emit _vehicle->cameraManager()->streamChanged();
         }
     }
 }
@@ -1786,7 +1790,7 @@ QGCCameraControl::_streamTimeout()
         //-- If we have at least one stream, work with what we have.
         if(_streams.count()) {
             emit autoStreamChanged();
-            emit _vehicle->dynamicCameras()->streamChanged();
+            emit _vehicle->cameraManager()->streamChanged();
         }
         return;
     }
@@ -2140,7 +2144,7 @@ QGCCameraControl::wb()
 Fact*
 QGCCameraControl::mode()
 {
-    return _paramComplete ? getFact(kCAM_MODE) : nullptr;
+    return _paramComplete && factExists(kCAM_MODE) ? getFact(kCAM_MODE) : nullptr;
 }
 
 //-----------------------------------------------------------------------------

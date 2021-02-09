@@ -24,7 +24,6 @@ Item {
     property var missionController
     property var geoFenceController
     property var rallyPointController
-    property var guidedController
 
     // The following code is used to track vehicle states for showing the mission complete dialog
     property var  _activeVehicle:                   QGroundControl.multiVehicleManager.activeVehicle
@@ -86,7 +85,7 @@ Item {
                     QGCButton {
                         Layout.fillWidth:   true
                         text:               qsTr("Remove plan from vehicle")
-                        visible:            !_activeVehicle.connectionLost// && !_activeVehicle.apmFirmware  // ArduPilot has a bug somewhere with mission clear
+                        visible:            !_activeVehicle.communicationLost// && !_activeVehicle.apmFirmware  // ArduPilot has a bug somewhere with mission clear
                         onClicked: {
                             _planController.removeAllFromVehicle()
                             hideDialog()
@@ -109,15 +108,15 @@ Item {
                     ColumnLayout {
                         Layout.fillWidth:   true
                         spacing:            ScreenTools.defaultFontPixelHeight
-                        visible:            !_activeVehicle.connectionLost && guidedController.showResumeMission
+                        visible:            !_activeVehicle.communicationLost && globals.guidedControllerFlyView.showResumeMission
 
                         QGCButton {
                             Layout.fillWidth:   true
                             Layout.alignment:   Qt.AlignHCenter
-                            text:               qsTr("Resume Mission From Waypoint %1").arg(guidedController._resumeMissionIndex)
+                            text:               qsTr("Resume Mission From Waypoint %1").arg(globals.guidedControllerFlyView._resumeMissionIndex)
 
                             onClicked: {
-                                guidedController.executeAction(guidedController.actionResumeMission, null, null)
+                                globals.guidedControllerFlyView.executeAction(globals.guidedControllerFlyView.actionResumeMission, null, null)
                                 hideDialog()
                             }
                         }
@@ -134,7 +133,7 @@ Item {
                         wrapMode:           Text.WordWrap
                         color:              qgcPal.warningText
                         text:               qsTr("If you are changing batteries for Resume Mission do not disconnect from the vehicle.")
-                        visible:            guidedController.showResumeMission
+                        visible:            globals.guidedControllerFlyView.showResumeMission
                     }
                 }
             }

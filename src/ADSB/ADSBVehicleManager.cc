@@ -44,6 +44,7 @@ void ADSBVehicleManager::_cleanupStaleVehicles()
         if (adsbVehicle->expired()) {
             qCDebug(ADSBVehicleManagerLog) << "Expired" << QStringLiteral("%1").arg(adsbVehicle->icaoAddress(), 0, 16);
             _adsbVehicles.removeAt(i);
+            _adsbICAOMap.remove(adsbVehicle->icaoAddress());
             adsbVehicle->deleteLater();
         }
     }
@@ -82,6 +83,7 @@ ADSBTCPLink::ADSBTCPLink(const QString& hostAddress, int port, QObject* parent)
 ADSBTCPLink::~ADSBTCPLink(void)
 {
     if (_socket) {
+        QObject::disconnect(_socket, &QTcpSocket::readyRead, this, &ADSBTCPLink::_readBytes);
         _socket->disconnectFromHost();
         _socket->deleteLater();
         _socket = nullptr;

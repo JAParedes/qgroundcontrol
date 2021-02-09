@@ -22,12 +22,12 @@
 class FlightPathSegment;
 class VisualMissionItem;
 class MissionItem;
-class MissionSettingsItem;
 class AppSettings;
 class MissionManager;
 class SimpleMissionItem;
 class ComplexMissionItem;
 class MissionSettingsItem;
+class TakeoffMissionItem;
 class QDomDocument;
 class PlanViewSettings;
 
@@ -45,27 +45,29 @@ public:
     ~MissionController();
 
     typedef struct {
-        double  maxTelemetryDistance;
-        double  totalDistance;
-        double  totalTime;
-        double  hoverDistance;
-        double  hoverTime;
-        double  cruiseDistance;
-        double  cruiseTime;
-        double  cruiseSpeed;
-        double  hoverSpeed;
-        double  vehicleSpeed;           ///< Either cruise or hover speed based on vehicle type and vtol state
-        double  vehicleYaw;
-        double  gimbalYaw;              ///< NaN signals yaw was never changed
-        double  gimbalPitch;            ///< NaN signals pitch was never changed
-        int     mAhBattery;             ///< 0 for not available
-        double  hoverAmps;              ///< Amp consumption during hover
-        double  cruiseAmps;             ///< Amp consumption during cruise
-        double  ampMinutesAvailable;    ///< Amp minutes available from single battery
-        double  hoverAmpsTotal;         ///< Total hover amps used
-        double  cruiseAmpsTotal;        ///< Total cruise amps used
-        int     batteryChangePoint;     ///< -1 for not supported, 0 for not needed
-        int     batteriesRequired;      ///< -1 for not supported
+        double                      maxTelemetryDistance;
+        double                      totalDistance;
+        double                      totalTime;
+        double                      hoverDistance;
+        double                      hoverTime;
+        double                      cruiseDistance;
+        double                      cruiseTime;
+        int                         mAhBattery;             ///< 0 for not available
+        double                      hoverAmps;              ///< Amp consumption during hover
+        double                      cruiseAmps;             ///< Amp consumption during cruise
+        double                      ampMinutesAvailable;    ///< Amp minutes available from single battery
+        double                      hoverAmpsTotal;         ///< Total hover amps used
+        double                      cruiseAmpsTotal;        ///< Total cruise amps used
+        int                         batteryChangePoint;     ///< -1 for not supported, 0 for not needed
+        int                         batteriesRequired;      ///< -1 for not supported
+        double                      vehicleYaw;
+        double                      gimbalYaw;              ///< NaN signals yaw was never changed
+        double                      gimbalPitch;            ///< NaN signals pitch was never changed
+        // The following values are the state prior to executing this item
+        QGCMAVLink::VehicleClass_t  vtolMode;               ///< Either VehicleClassFixedWing, VehicleClassMultiRotor, VehicleClassGeneric (mode unknown)
+        double                      cruiseSpeed;
+        double                      hoverSpeed;
+        double                      vehicleSpeed;           ///< Either cruise or hover speed based on vehicle type and vtol state
     } MissionFlightStatus_t;
 
     Q_PROPERTY(QmlObjectListModel*  visualItems                     READ visualItems                    NOTIFY visualItemsChanged)
@@ -84,6 +86,7 @@ public:
     Q_PROPERTY(int                  currentPlanViewSeqNum           READ currentPlanViewSeqNum          NOTIFY currentPlanViewSeqNumChanged)
     Q_PROPERTY(int                  currentPlanViewVIIndex          READ currentPlanViewVIIndex         NOTIFY currentPlanViewVIIndexChanged)
     Q_PROPERTY(VisualMissionItem*   currentPlanViewItem             READ currentPlanViewItem            NOTIFY currentPlanViewItemChanged)
+    Q_PROPERTY(TakeoffMissionItem*  takeoffMissionItem              READ takeoffMissionItem             NOTIFY takeoffMissionItemChanged)
     Q_PROPERTY(double               missionDistance                 READ missionDistance                NOTIFY missionDistanceChanged)
     Q_PROPERTY(double               missionTime                     READ missionTime                    NOTIFY missionTimeChanged)
     Q_PROPERTY(double               missionHoverDistance            READ missionHoverDistance           NOTIFY missionHoverDistanceChanged)
@@ -223,6 +226,7 @@ public:
     QStringList         complexMissionItemNames     (void) const;
     QGeoCoordinate      plannedHomePosition         (void) const;
     VisualMissionItem*  currentPlanViewItem         (void) const { return _currentPlanViewItem; }
+    TakeoffMissionItem* takeoffMissionItem          (void) const { return _takeoffMissionItem; }
     double              progressPct                 (void) const { return _progressPct; }
     QString             surveyComplexItemName       (void) const;
     QString             corridorScanComplexItemName (void) const;
@@ -278,6 +282,7 @@ signals:
     void currentPlanViewSeqNumChanged       (void);
     void currentPlanViewVIIndexChanged      (void);
     void currentPlanViewItemChanged         (void);
+    void takeoffMissionItemChanged          (void);
     void missionBoundingCubeChanged         (void);
     void missionItemCountChanged            (int missionItemCount);
     void onlyInsertTakeoffValidChanged      (void);
@@ -377,6 +382,7 @@ private:
     int                         _currentPlanViewSeqNum =        -1;
     int                         _currentPlanViewVIIndex =       -1;
     VisualMissionItem*          _currentPlanViewItem =          nullptr;
+    TakeoffMissionItem*         _takeoffMissionItem =           nullptr;
     QTimer                      _updateTimer;
     QGCGeoBoundingCube          _travelBoundingCube;
     QGeoCoordinate              _takeoffCoordinate;

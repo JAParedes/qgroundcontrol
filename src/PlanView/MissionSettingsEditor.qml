@@ -26,8 +26,8 @@ Rectangle {
     property bool   _vehicleHasHomePosition:        _controllerVehicle.homePosition.isValid
     property bool   _showCruiseSpeed:               !_controllerVehicle.multiRotor
     property bool   _showHoverSpeed:                _controllerVehicle.multiRotor || _controllerVehicle.vtol
-    property bool   _multipleFirmware:              QGroundControl.supportedFirmwareCount > 2
-    property bool   _multipleVehicleTypes:          QGroundControl.supportedVehicleCount > 1
+    property bool   _multipleFirmware:              !QGroundControl.singleFirmwareSupport
+    property bool   _multipleVehicleTypes:          !QGroundControl.singleVehicleSupport
     property real   _fieldWidth:                    ScreenTools.defaultFontPixelWidth * 16
     property bool   _mobile:                        ScreenTools.isMobile
     property var    _savePath:                      QGroundControl.settingsManager.appSettings.missionSavePath
@@ -37,6 +37,7 @@ Rectangle {
     property bool   _showCameraSection:             (_waypointsOnlyMode || QGroundControl.corePlugin.showAdvancedUI) && !_controllerVehicle.apmFirmware
     property bool   _simpleMissionStart:            QGroundControl.corePlugin.options.showSimpleMissionStart
     property bool   _showFlightSpeed:               !_controllerVehicle.vtol && !_simpleMissionStart && !_controllerVehicle.apmFirmware
+    property bool   _allowFWVehicleTypeSelection:   _noMissionItemsAdded && !globals.activeVehicle
 
     readonly property string _firmwareLabel:    qsTr("Firmware")
     readonly property string _vehicleLabel:     qsTr("Vehicle")
@@ -194,14 +195,14 @@ Rectangle {
                     visible:            _multipleFirmware
                 }
                 FactComboBox {
-                    fact:                   QGroundControl.settingsManager.appSettings.offlineEditingFirmwareType
+                    fact:                   QGroundControl.settingsManager.appSettings.offlineEditingFirmwareClass
                     indexModel:             false
                     Layout.preferredWidth:  _fieldWidth
-                    visible:                _multipleFirmware && _noMissionItemsAdded
+                    visible:                _multipleFirmware && _allowFWVehicleTypeSelection
                 }
                 QGCLabel {
                     text:       _controllerVehicle.firmwareTypeString
-                    visible:    _multipleFirmware && !_noMissionItemsAdded
+                    visible:    _multipleFirmware && !_allowFWVehicleTypeSelection
                 }
 
                 QGCLabel {
@@ -210,14 +211,24 @@ Rectangle {
                     visible:            _multipleVehicleTypes
                 }
                 FactComboBox {
-                    fact:                   QGroundControl.settingsManager.appSettings.offlineEditingVehicleType
+                    fact:                   QGroundControl.settingsManager.appSettings.offlineEditingVehicleClass
                     indexModel:             false
                     Layout.preferredWidth:  _fieldWidth
-                    visible:                _multipleVehicleTypes && _noMissionItemsAdded
+                    visible:                _multipleVehicleTypes && _allowFWVehicleTypeSelection
                 }
                 QGCLabel {
                     text:       _controllerVehicle.vehicleTypeString
-                    visible:    _multipleVehicleTypes && !_noMissionItemsAdded
+                    visible:    _multipleVehicleTypes && !_allowFWVehicleTypeSelection
+                }
+
+                QGCLabel {
+                    Layout.columnSpan:      2
+                    Layout.alignment:       Qt.AlignHCenter
+                    Layout.fillWidth:       true
+                    wrapMode:               Text.WordWrap
+                    font.pointSize:         ScreenTools.smallFontPointSize
+                    text:                   qsTr("The following speed values are used to calculate total mission time. They do not affect the flight speed for the mission.")
+                    visible:                _showCruiseSpeed || _showHoverSpeed
                 }
 
                 QGCLabel {

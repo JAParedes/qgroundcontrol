@@ -13,12 +13,12 @@ import QGroundControl.Palette           1.0
 Item {
     width: missionStats.width + _margins
 
-    property var    _planMasterController:      mainWindow.planMasterControllerPlanView
-    property var    _currentMissionItem:        mainWindow.currentPlanMissionItem          ///< Mission item to display status for
+    property var    _planMasterController:      globals.planMasterControllerPlanView
+    property var    _currentMissionItem:        globals.currentPlanMissionItem          ///< Mission item to display status for
 
     property var    missionItems:               _controllerValid ? _planMasterController.missionController.visualItems : undefined
     property real   missionDistance:            _controllerValid ? _planMasterController.missionController.missionDistance : NaN
-    property real   missionTime:                _controllerValid ? _planMasterController.missionController.missionTime : NaN
+    property real   missionTime:                _controllerValid ? _planMasterController.missionController.missionTime : 0
     property real   missionMaxTelemetry:        _controllerValid ? _planMasterController.missionController.missionMaxTelemetry : NaN
     property bool   missionDirty:               _controllerValid ? _planMasterController.missionController.dirty : false
 
@@ -27,7 +27,9 @@ Item {
     property var    _controllerDirty:           _controllerValid ? _planMasterController.dirty : false
     property var    _controllerSyncInProgress:  _controllerValid ? _planMasterController.syncInProgress : false
 
-    property bool   _statusValid:               _currentMissionItem !== undefined && _currentMissionItem !== null
+    property bool   _currentMissionItemValid:   _currentMissionItem && _currentMissionItem !== undefined && _currentMissionItem !== null
+    property bool   _curreItemIsFlyThrough:     _currentMissionItemValid && _currentMissionItem.specifiesCoordinate && !_currentMissionItem.isStandaloneCoordinate
+    property bool   _currentItemIsVTOLTakeoff:  _currentMissionItemValid && _currentMissionItem.command == 84
     property bool   _missionValid:              missionItems !== undefined
 
     property real   _dataFontSize:              ScreenTools.defaultFontPointSize
@@ -36,23 +38,27 @@ Item {
     property real   _smallValueWidth:           ScreenTools.defaultFontPixelWidth * 3
     property real   _labelToValueSpacing:       ScreenTools.defaultFontPixelWidth
     property real   _rowSpacing:                ScreenTools.isMobile ? 1 : 0
-    property real   _distance:                  _statusValid && _currentMissionItem ? _currentMissionItem.distance : NaN
-    property real   _altDifference:             _statusValid && _currentMissionItem ? _currentMissionItem.altDifference : NaN
-    property real   _gradient:                  _statusValid && _currentMissionItem && _currentMissionItem.distance > 0 ? (Math.atan(_currentMissionItem.altDifference / _currentMissionItem.distance) * (180.0/Math.PI)) : NaN
-    property real   _azimuth:                   _statusValid && _currentMissionItem ? _currentMissionItem.azimuth : NaN
-    property real   _heading:                   _statusValid && _currentMissionItem ? _currentMissionItem.missionVehicleYaw : NaN
+    property real   _distance:                  _currentMissionItemValid ? _currentMissionItem.distance : NaN
+    property real   _altDifference:             _currentMissionItemValid ? _currentMissionItem.altDifference : NaN
+    property real   _azimuth:                   _currentMissionItemValid ? _currentMissionItem.azimuth : NaN
+    property real   _heading:                   _currentMissionItemValid ? _currentMissionItem.missionVehicleYaw : NaN
     property real   _missionDistance:           _missionValid ? missionDistance : NaN
     property real   _missionMaxTelemetry:       _missionValid ? missionMaxTelemetry : NaN
-    property real   _missionTime:               _missionValid ? missionTime : NaN
+    property real   _missionTime:               _missionValid ? missionTime : 0
     property int    _batteryChangePoint:        _controllerValid ? _planMasterController.missionController.batteryChangePoint : -1
     property int    _batteriesRequired:         _controllerValid ? _planMasterController.missionController.batteriesRequired : -1
     property bool   _batteryInfoAvailable:      _batteryChangePoint >= 0 || _batteriesRequired >= 0
     property real   _controllerProgressPct:     _controllerValid ? _planMasterController.missionController.progressPct : 0
     property bool   _syncInProgress:            _controllerValid ? _planMasterController.missionController.syncInProgress : false
+    property real   _gradient:                  _currentMissionItemValid && _currentMissionItem.distance > 0 ?
+                                                    (_currentItemIsVTOLTakeoff ?
+                                                         0 :
+                                                         (Math.atan(_currentMissionItem.altDifference / _currentMissionItem.distance) * (180.0/Math.PI)))
+                                                  : NaN
 
     property string _distanceText:              isNaN(_distance) ?              "-.-" : QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_distance).toFixed(1) + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString
     property string _altDifferenceText:         isNaN(_altDifference) ?         "-.-" : QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_altDifference).toFixed(1) + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString
-    property string _gradientText:              isNaN(_gradient) ?              "-.-" : _gradient.toFixed(0) + " %"
+    property string _gradientText:              isNaN(_gradient) ?              "-.-" : _gradient.toFixed(0) + " deg"
     property string _azimuthText:               isNaN(_azimuth) ?               "-.-" : Math.round(_azimuth) % 360
     property string _headingText:               isNaN(_azimuth) ?               "-.-" : Math.round(_heading) % 360
     property string _missionDistanceText:       isNaN(_missionDistance) ?       "-.-" : QGroundControl.unitsConversion.metersToAppSettingsHorizontalDistanceUnits(_missionDistance).toFixed(0) + " " + QGroundControl.unitsConversion.appSettingsHorizontalDistanceUnitsString
@@ -63,11 +69,20 @@ Item {
     readonly property real _margins: ScreenTools.defaultFontPixelWidth
 
     function getMissionTime() {
-        if(isNaN(_missionTime)) {
+        if (!_missionTime) {
             return "00:00:00"
         }
-        var t = new Date(0, 0, 0, 0, 0, Number(_missionTime))
-        return Qt.formatTime(t, 'hh:mm:ss')
+        var t = new Date(2021, 0, 0, 0, 0, Number(_missionTime))
+        var days = Qt.formatDateTime(t, 'dd')
+        var complete
+
+        if (days == 31) {
+            days = '0'
+            complete = Qt.formatTime(t, 'hh:mm:ss')
+        } else {
+            complete = days + " days " + Qt.formatTime(t, 'hh:mm:ss')
+        }
+        return complete
     }
 
     // Progress bar

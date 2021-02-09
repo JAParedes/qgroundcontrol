@@ -96,12 +96,9 @@ void MissionController::_resetMissionFlightStatus(void)
     _missionFlightStatus.cruiseSpeed =          _controllerVehicle->defaultCruiseSpeed();
     _missionFlightStatus.hoverSpeed =           _controllerVehicle->defaultHoverSpeed();
     _missionFlightStatus.vehicleSpeed =         _controllerVehicle->multiRotor() || _managerVehicle->vtol() ? _missionFlightStatus.hoverSpeed : _missionFlightStatus.cruiseSpeed;
-    _missionFlightStatus.vehicleYaw =           0.0;
-    _missionFlightStatus.gimbalYaw =            std::numeric_limits<double>::quiet_NaN();
-    _missionFlightStatus.gimbalPitch =          std::numeric_limits<double>::quiet_NaN();
-
-    // Battery information
-
+    _missionFlightStatus.vehicleYaw =           qQNaN();
+    _missionFlightStatus.gimbalYaw =            qQNaN();
+    _missionFlightStatus.gimbalPitch =          qQNaN();
     _missionFlightStatus.mAhBattery =           0;
     _missionFlightStatus.hoverAmps =            0;
     _missionFlightStatus.cruiseAmps =           0;
@@ -110,6 +107,7 @@ void MissionController::_resetMissionFlightStatus(void)
     _missionFlightStatus.cruiseAmpsTotal =      0;
     _missionFlightStatus.batteryChangePoint =   -1;
     _missionFlightStatus.batteriesRequired =    -1;
+    _missionFlightStatus.vtolMode =             _missionContainsVTOLTakeoff ? QGCMAVLink::VehicleClassMultiRotor : QGCMAVLink::VehicleClassFixedWing;
 
     _controllerVehicle->firmwarePlugin()->batteryConsumptionData(_controllerVehicle, _missionFlightStatus.mAhBattery, _missionFlightStatus.hoverAmps, _missionFlightStatus.cruiseAmps);
     if (_missionFlightStatus.mAhBattery != 0) {
@@ -168,6 +166,7 @@ void MissionController::_newMissionItemsAvailableFromVehicle(bool removeAllReque
         _visualItems->deleteLater();
         _visualItems  = nullptr;
         _settingsItem = nullptr;
+        _takeoffMissionItem = nullptr;
         _updateContainsItems(); // This will clear containsItems which will be set again below. This will re-pop Start Mission confirmation.
 
         QmlObjectListModel* newControllerMissionItems = new QmlObjectListModel(this);
@@ -194,9 +193,9 @@ void MissionController::_newMissionItemsAvailableFromVehicle(bool removeAllReque
             SimpleMissionItem* simpleItem = new SimpleMissionItem(_masterController, _flyView, *missionItem, this);
             if (TakeoffMissionItem::isTakeoffCommand(static_cast<MAV_CMD>(simpleItem->command()))) {
                 // This needs to be a TakeoffMissionItem
-                TakeoffMissionItem* takeoffItem = new TakeoffMissionItem(*missionItem, _masterController, _flyView, settingsItem, this);
+                _takeoffMissionItem = new TakeoffMissionItem(*missionItem, _masterController, _flyView, settingsItem, this);
                 simpleItem->deleteLater();
-                simpleItem = takeoffItem;
+                simpleItem = _takeoffMissionItem;
             }
             newControllerMissionItems->append(simpleItem);
         }
@@ -320,14 +319,16 @@ VisualMissionItem* MissionController::_insertSimpleMissionItemWorker(QGeoCoordin
     _initVisualItem(newItem);
 
     if (newItem->specifiesAltitude()) {
-        const MissionCommandUIInfo* uiInfo = qgcApp()->toolbox()->missionCommandTree()->getUIInfo(_controllerVehicle, command);
-        if (!uiInfo->isLandCommand()) {
+        if (!qgcApp()->toolbox()->missionCommandTree()->isLandCommand(command)) {
             double  prevAltitude;
             int     prevAltitudeMode;
 
             if (_findPreviousAltitude(visualItemIndex, &prevAltitude, &prevAltitudeMode)) {
                 newItem->altitude()->setRawValue(prevAltitude);
-                newItem->setAltitudeMode(static_cast<QGroundControlQmlGlobal::AltitudeMode>(prevAltitudeMode));
+                if (globalAltitudeMode() == QGroundControlQmlGlobal::AltitudeModeNone) {
+                    // We are in mixed altitude modes, so copy from previous. Otherwise alt mode will be set from global setting.
+                    newItem->setAltitudeMode(static_cast<QGroundControlQmlGlobal::AltitudeMode>(prevAltitudeMode));
+                }
             }
         }
     }
@@ -358,46 +359,46 @@ VisualMissionItem* MissionController::insertSimpleMissionItem(QGeoCoordinate coo
 VisualMissionItem* MissionController::insertTakeoffItem(QGeoCoordinate /*coordinate*/, int visualItemIndex, bool makeCurrentItem)
 {
     int sequenceNumber = _nextSequenceNumber();
-    TakeoffMissionItem * newItem = new TakeoffMissionItem(_controllerVehicle->vtol() ? MAV_CMD_NAV_VTOL_TAKEOFF : MAV_CMD_NAV_TAKEOFF, _masterController, _flyView, _settingsItem, this);
-    newItem->setSequenceNumber(sequenceNumber);
-    _initVisualItem(newItem);
+    _takeoffMissionItem = new TakeoffMissionItem(_controllerVehicle->vtol() ? MAV_CMD_NAV_VTOL_TAKEOFF : MAV_CMD_NAV_TAKEOFF, _masterController, _flyView, _settingsItem, this);
+    _takeoffMissionItem->setSequenceNumber(sequenceNumber);
+    _initVisualItem(_takeoffMissionItem);
 
-    if (newItem->specifiesAltitude()) {
+    if (_takeoffMissionItem->specifiesAltitude()) {
         double  prevAltitude;
         int     prevAltitudeMode;
 
         if (_findPreviousAltitude(visualItemIndex, &prevAltitude, &prevAltitudeMode)) {
-            newItem->altitude()->setRawValue(prevAltitude);
-            newItem->setAltitudeMode(static_cast<QGroundControlQmlGlobal::AltitudeMode>(prevAltitudeMode));
+            _takeoffMissionItem->altitude()->setRawValue(prevAltitude);
+            _takeoffMissionItem->setAltitudeMode(static_cast<QGroundControlQmlGlobal::AltitudeMode>(prevAltitudeMode));
         }
     }
     if (visualItemIndex == -1) {
-        _visualItems->append(newItem);
+        _visualItems->append(_takeoffMissionItem);
     } else {
-        _visualItems->insert(visualItemIndex, newItem);
+        _visualItems->insert(visualItemIndex, _takeoffMissionItem);
     }
 
     _recalcAll();
 
     if (makeCurrentItem) {
-        setCurrentPlanViewSeqNum(newItem->sequenceNumber(), true);
+        setCurrentPlanViewSeqNum(_takeoffMissionItem->sequenceNumber(), true);
     }
 
     _firstItemAdded();
 
-    return newItem;
+    return _takeoffMissionItem;
 }
 
 VisualMissionItem* MissionController::insertLandItem(QGeoCoordinate coordinate, int visualItemIndex, bool makeCurrentItem)
 {
-    if (_managerVehicle->fixedWing()) {
+    if (_controllerVehicle->fixedWing()) {
         FixedWingLandingComplexItem* fwLanding = qobject_cast<FixedWingLandingComplexItem*>(insertComplexMissionItem(FixedWingLandingComplexItem::name, coordinate, visualItemIndex, makeCurrentItem));
         return fwLanding;
-    } else if (_managerVehicle->vtol()) {
+    } else if (_controllerVehicle->vtol()) {
         VTOLLandingComplexItem* vtolLanding = qobject_cast<VTOLLandingComplexItem*>(insertComplexMissionItem(VTOLLandingComplexItem::name, coordinate, visualItemIndex, makeCurrentItem));
         return vtolLanding;
     } else {
-        return _insertSimpleMissionItemWorker(coordinate, _managerVehicle->vtol() ? MAV_CMD_NAV_VTOL_LAND : MAV_CMD_NAV_RETURN_TO_LAUNCH, visualItemIndex, makeCurrentItem);
+        return _insertSimpleMissionItemWorker(coordinate, _controllerVehicle->vtol() ? MAV_CMD_NAV_VTOL_LAND : MAV_CMD_NAV_RETURN_TO_LAUNCH, visualItemIndex, makeCurrentItem);
     }
 }
 
@@ -405,7 +406,7 @@ VisualMissionItem* MissionController::insertROIMissionItem(QGeoCoordinate coordi
 {
     SimpleMissionItem* simpleItem = qobject_cast<SimpleMissionItem*>(_insertSimpleMissionItemWorker(coordinate, MAV_CMD_DO_SET_ROI_LOCATION, visualItemIndex, makeCurrentItem));
 
-    if (!_controllerVehicle->firmwarePlugin()->supportedMissionCommands().contains(MAV_CMD_DO_SET_ROI_LOCATION)) {
+    if (!_controllerVehicle->firmwarePlugin()->supportedMissionCommands(QGCMAVLink::VehicleClassGeneric).contains(MAV_CMD_DO_SET_ROI_LOCATION)) {
         simpleItem->setCommand(MAV_CMD_DO_SET_ROI)  ;
         simpleItem->missionItem().setParam1(MAV_ROI_LOCATION);
     }
@@ -417,7 +418,7 @@ VisualMissionItem* MissionController::insertCancelROIMissionItem(int visualItemI
 {
     SimpleMissionItem* simpleItem = qobject_cast<SimpleMissionItem*>(_insertSimpleMissionItemWorker(QGeoCoordinate(), MAV_CMD_DO_SET_ROI_NONE, visualItemIndex, makeCurrentItem));
 
-    if (!_controllerVehicle->firmwarePlugin()->supportedMissionCommands().contains(MAV_CMD_DO_SET_ROI_NONE)) {
+    if (!_controllerVehicle->firmwarePlugin()->supportedMissionCommands(QGCMAVLink::VehicleClassGeneric).contains(MAV_CMD_DO_SET_ROI_NONE)) {
         simpleItem->setCommand(MAV_CMD_DO_SET_ROI)  ;
         simpleItem->missionItem().setParam1(MAV_ROI_NONE);
     }
@@ -535,6 +536,10 @@ void MissionController::removeVisualItem(int viIndex)
     bool removeSurveyStyle = _visualItems->value<SurveyComplexItem*>(viIndex) || _visualItems->value<CorridorScanComplexItem*>(viIndex);
     VisualMissionItem* item = qobject_cast<VisualMissionItem*>(_visualItems->removeAt(viIndex));
 
+    if (item == _takeoffMissionItem) {
+        _takeoffMissionItem = nullptr;
+    }
+
     _deinitVisualItem(item);
     item->deleteLater();
 
@@ -590,6 +595,7 @@ void MissionController::removeAll(void)
         _visualItems->clearAndDeleteContents();
         _visualItems->deleteLater();
         _settingsItem = nullptr;
+        _takeoffMissionItem = nullptr;
         _visualItems = new QmlObjectListModel(this);
         _addMissionSettings(_visualItems);
         _initAllVisualItems();
@@ -725,16 +731,16 @@ bool MissionController::_loadJsonMissionFileV2(const QJsonObject& json, QmlObjec
 
     // Get the firmware/vehicle type from the plan file
     MAV_AUTOPILOT   planFileFirmwareType =  static_cast<MAV_AUTOPILOT>(json[_jsonFirmwareTypeKey].toInt());
-    MAV_TYPE        planFileVehicleType =   static_cast<MAV_TYPE>       (appSettings->offlineEditingVehicleType()->rawValue().toInt());
+    MAV_TYPE        planFileVehicleType =   static_cast<MAV_TYPE>     (QGCMAVLink::vehicleClassToMavType(appSettings->offlineEditingVehicleClass()->rawValue().toInt()));
     if (json.contains(_jsonVehicleTypeKey)) {
         planFileVehicleType = static_cast<MAV_TYPE>(json[_jsonVehicleTypeKey].toInt());
     }
 
     // Update firmware/vehicle offline settings if we aren't connect to a vehicle
     if (_masterController->offline()) {
-        appSettings->offlineEditingFirmwareType()->setRawValue(AppSettings::offlineEditingFirmwareTypeFromFirmwareType(static_cast<MAV_AUTOPILOT>(json[_jsonFirmwareTypeKey].toInt())));
+        appSettings->offlineEditingFirmwareClass()->setRawValue(QGCMAVLink::firmwareClass(static_cast<MAV_AUTOPILOT>(json[_jsonFirmwareTypeKey].toInt())));
         if (json.contains(_jsonVehicleTypeKey)) {
-            appSettings->offlineEditingVehicleType()->setRawValue(AppSettings::offlineEditingVehicleTypeFromVehicleType(static_cast<MAV_TYPE>(json[_jsonVehicleTypeKey].toInt())));
+            appSettings->offlineEditingVehicleClass()->setRawValue(QGCMAVLink::vehicleClass(planFileVehicleType));
         }
     }
 
@@ -901,11 +907,11 @@ bool MissionController::_loadItemsFromJson(const QJsonObject& json, QmlObjectLis
 
     int fileVersion;
     JsonHelper::validateExternalQGCJsonFile(json,
-                                    _jsonFileTypeValue,    // expected file type
-                                    1,                     // minimum supported version
-                                    2,                     // maximum supported version
-                                    fileVersion,
-                                    errorString);
+                                            _jsonFileTypeValue,    // expected file type
+                                            1,                     // minimum supported version
+                                            2,                     // maximum supported version
+                                            fileVersion,
+                                            errorString);
 
     if (fileVersion == 1) {
         return _loadJsonMissionFileV1(json, visualItems, errorString);
@@ -982,8 +988,9 @@ void MissionController::_initLoadedVisualItems(QmlObjectListModel* loadedVisualI
     if (_visualItems) {
         _deinitAllVisualItems();
         _visualItems->deleteLater();
-        _settingsItem = nullptr;
     }
+    _settingsItem = nullptr;
+    _takeoffMissionItem = nullptr;
 
     _visualItems = loadedVisualItems;
 
@@ -1147,22 +1154,25 @@ double MissionController::_calcDistanceToHome(VisualMissionItem* currentItem, Vi
 
 FlightPathSegment* MissionController::_createFlightPathSegmentWorker(VisualItemPair& pair)
 {
-    QGeoCoordinate      coord1 =            pair.first->isSimpleItem() ? pair.first->coordinate() : pair.first->exitCoordinate();
-    QGeoCoordinate      coord2 =            pair.second->coordinate();
-    double              coord1Alt =         pair.first->isSimpleItem() ? pair.first->amslEntryAlt() : pair.first->amslExitAlt();
-    double              coord2Alt =         pair.second->amslEntryAlt();
+    // The takeoff goes straight up from ground to alt and then over to specified position at same alt. Which means
+    // that coord 1 altitude is the same as coord altitude.
+    bool                takeoffStraightUp   = pair.second->isTakeoffItem() && !_controllerVehicle->fixedWing();
 
-    FlightPathSegment*  segment =           new FlightPathSegment(coord1, coord1Alt, coord2, coord2Alt, !_flyView /* queryTerrainData */,  this);
+    QGeoCoordinate      coord1              = pair.first->exitCoordinate();
+    QGeoCoordinate      coord2              = pair.second->coordinate();
+    double              coord2AMSLAlt       = pair.second->amslEntryAlt();
+    double              coord1AMSLAlt       = takeoffStraightUp ? coord2AMSLAlt : pair.first->amslExitAlt();
 
-    auto                coord1Notifier =    pair.first->isSimpleItem() ? &VisualMissionItem::coordinateChanged : &VisualMissionItem::exitCoordinateChanged;
-    auto                coord2Notifier =    &VisualMissionItem::coordinateChanged;
-    auto                coord1AltNotifier = pair.first->isSimpleItem() ? &VisualMissionItem::amslEntryAltChanged : &VisualMissionItem::amslExitAltChanged;
-    auto                coord2AltNotifier = &VisualMissionItem::amslEntryAltChanged;
+    FlightPathSegment* segment = new FlightPathSegment(coord1, coord1AMSLAlt, coord2, coord2AMSLAlt, !_flyView /* queryTerrainData */,  this);
 
-    connect(pair.first,  coord1Notifier,                                segment,    &FlightPathSegment::setCoordinate1);
-    connect(pair.second, coord2Notifier,                                segment,    &FlightPathSegment::setCoordinate2);
-    connect(pair.first,  coord1AltNotifier,                             segment,    &FlightPathSegment::setCoord1AMSLAlt);
-    connect(pair.second, coord2AltNotifier,                             segment,    &FlightPathSegment::setCoord2AMSLAlt);
+    if (takeoffStraightUp) {
+        connect(pair.second, &VisualMissionItem::amslEntryAltChanged, segment, &FlightPathSegment::setCoord1AMSLAlt);
+    } else {
+        connect(pair.first, &VisualMissionItem::amslExitAltChanged, segment, &FlightPathSegment::setCoord1AMSLAlt);
+    }
+    connect(pair.first,  &VisualMissionItem::exitCoordinateChanged, segment,    &FlightPathSegment::setCoordinate1);
+    connect(pair.second, &VisualMissionItem::coordinateChanged,     segment,    &FlightPathSegment::setCoordinate2);
+    connect(pair.second, &VisualMissionItem::amslEntryAltChanged,   segment,    &FlightPathSegment::setCoord2AMSLAlt);
 
     connect(pair.second, &VisualMissionItem::coordinateChanged,         this,       &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
 
@@ -1232,7 +1242,7 @@ void MissionController::_recalcFlightPathSegments(void)
     bool                firstCoordinateNotFound =   true;
     VisualMissionItem*  lastFlyThroughVI =          qobject_cast<VisualMissionItem*>(_visualItems->get(0));
     bool                linkEndToHome =             false;
-    bool                linkStartToHome =           _managerVehicle->rover() ? true : false;
+    bool                linkStartToHome =           _controllerVehicle->rover() ? true : false;
     bool                foundRTL =                  false;
     bool                homePositionValid =         _settingsItem->coordinate().isValid();
     bool                roiActive =                 false;
@@ -1246,7 +1256,7 @@ void MissionController::_recalcFlightPathSegments(void)
     _flightPathSegmentHashTable.clear();
     _waypointPath.clear();
 
-    // Note: Although visual support _incompleteComplexItemLines is still in the codebase. The support for populating the list is not.
+    // Note: Although visual support for _incompleteComplexItemLines is still in the codebase. The support for populating the list is not.
     // This is due to the initial implementation being buggy and incomplete with respect to correctly generating the line set.
     // So for now we leave the code for displaying them in, but none are ever added until we have time to implement the correct support.
 
@@ -1258,6 +1268,9 @@ void MissionController::_recalcFlightPathSegments(void)
     _directionArrows.clear();
     _incompleteComplexItemLines.clearAndDeleteContents();
 
+    // Mission Settings item needs to start with no segment
+    lastFlyThroughVI->clearSimpleFlighPathSegment();
+
     // Grovel through the list of items keeping track of things needed to correctly draw waypoints lines
 
     for (int i=1; i<_visualItems->count(); i++) {
@@ -1265,7 +1278,7 @@ void MissionController::_recalcFlightPathSegments(void)
         SimpleMissionItem*  simpleItem =    qobject_cast<SimpleMissionItem*>(visualItem);
         ComplexMissionItem* complexItem =   qobject_cast<ComplexMissionItem*>(visualItem);
 
-        visualItem->setSimpleFlighPathSegment(nullptr);
+        visualItem->clearSimpleFlighPathSegment();
 
         if (simpleItem) {
             if (roiActive) {
@@ -1490,18 +1503,17 @@ void MissionController::_recalcMissionFlightStatus()
     // both relative altitude.
 
     // No values for first item
-    lastFlyThroughVI->setAltDifference(0.0);
-    lastFlyThroughVI->setAzimuth(0.0);
-    lastFlyThroughVI->setDistance(0.0);
+    lastFlyThroughVI->setAltDifference(0);
+    lastFlyThroughVI->setAzimuth(0);
+    lastFlyThroughVI->setDistance(0);
+    lastFlyThroughVI->setDistanceFromStart(0);
 
-    _minAMSLAltitude = _maxAMSLAltitude = _settingsItem->coordinate().altitude();
+    _minAMSLAltitude = _maxAMSLAltitude = qQNaN();
 
     _resetMissionFlightStatus();
 
-    bool   vtolInHover =                _missionContainsVTOLTakeoff;
     bool   linkStartToHome =            false;
     bool   foundRTL =                   false;
-    bool   vehicleYawSpecificallySet =  false;
     double totalHorizontalDistance =    0;
 
     for (int i=0; i<_visualItems->count(); i++) {
@@ -1514,25 +1526,11 @@ void MissionController::_recalcMissionFlightStatus()
         }
 
         // Assume the worst
-        item->setAzimuth(0.0);
-        item->setDistance(0.0);
+        item->setAzimuth(0);
+        item->setDistance(0);
+        item->setDistanceFromStart(0);
 
-        // Look for speed changed
-        double newSpeed = item->specifiedFlightSpeed();
-        if (!qIsNaN(newSpeed)) {
-            if (_controllerVehicle->multiRotor()) {
-                _missionFlightStatus.hoverSpeed = newSpeed;
-            } else if (_controllerVehicle->vtol()) {
-                if (vtolInHover) {
-                    _missionFlightStatus.hoverSpeed = newSpeed;
-                } else {
-                    _missionFlightStatus.cruiseSpeed = newSpeed;
-                }
-            } else {
-                _missionFlightStatus.cruiseSpeed = newSpeed;
-            }
-            _missionFlightStatus.vehicleSpeed = newSpeed;
-        }
+        // Gimbal states reflect the state AFTER executing the item
 
         // ROI commands cancel out previous gimbal yaw/pitch
         if (simpleItem) {
@@ -1540,8 +1538,8 @@ void MissionController::_recalcMissionFlightStatus()
             case MAV_CMD_NAV_ROI:
             case MAV_CMD_DO_SET_ROI_LOCATION:
             case MAV_CMD_DO_SET_ROI_WPNEXT_OFFSET:
-                _missionFlightStatus.gimbalYaw = std::numeric_limits<double>::quiet_NaN();
-                _missionFlightStatus.gimbalPitch = std::numeric_limits<double>::quiet_NaN();
+                _missionFlightStatus.gimbalYaw      = qQNaN();
+                _missionFlightStatus.gimbalPitch    = qQNaN();
                 break;
             default:
                 break;
@@ -1558,28 +1556,115 @@ void MissionController::_recalcMissionFlightStatus()
             _missionFlightStatus.gimbalPitch = gimbalPitch;
         }
 
-        if (i == 0) {
-            // We only process speed and gimbal from Mission Settings item
-            continue;
-        }
+        // We don't need to do any more processing if:
+        //  Mission Settings Item
+        //  We are after an RTL command
+        if (i != 0 && !foundRTL) {
+            // We must set the mission flight status prior to querying for any values from the item. This is because things like
+            // current speed, gimbal, vtol state  impact the values.
+            item->setMissionFlightStatus(_missionFlightStatus);
 
-        if (foundRTL) {
-            // No more vehicle distances after RTL
-            continue;
-        }
-
-        // Link back to home if first item is takeoff and we have home position
-        if (firstCoordinateItem && simpleItem && (simpleItem->mavCommand() == MAV_CMD_NAV_TAKEOFF || simpleItem->mavCommand() == MAV_CMD_NAV_VTOL_TAKEOFF)) {
-            if (homePositionValid) {
-                linkStartToHome = true;
-                if (_controllerVehicle->multiRotor() || _controllerVehicle->vtol()) {
-                    // We have to special case takeoff, assuming vehicle takes off straight up to specified altitude
-                    double azimuth, distance, altDifference;
-                    _calcPrevWaypointValues(_settingsItem, simpleItem, &azimuth, &distance, &altDifference);
-                    double takeoffTime = qAbs(altDifference) / _appSettings->offlineEditingAscentSpeed()->rawValue().toDouble();
-                    _addHoverTime(takeoffTime, 0, -1);
+            // Link back to home if first item is takeoff and we have home position
+            if (firstCoordinateItem && simpleItem && (simpleItem->mavCommand() == MAV_CMD_NAV_TAKEOFF || simpleItem->mavCommand() == MAV_CMD_NAV_VTOL_TAKEOFF)) {
+                if (homePositionValid) {
+                    linkStartToHome = true;
+                    if (_controllerVehicle->multiRotor() || _controllerVehicle->vtol()) {
+                        // We have to special case takeoff, assuming vehicle takes off straight up to specified altitude
+                        double azimuth, distance, altDifference;
+                        _calcPrevWaypointValues(_settingsItem, simpleItem, &azimuth, &distance, &altDifference);
+                        double takeoffTime = qAbs(altDifference) / _appSettings->offlineEditingAscentSpeed()->rawValue().toDouble();
+                        _addHoverTime(takeoffTime, 0, -1);
+                    }
                 }
             }
+
+            _addTimeDistance(_missionFlightStatus.vtolMode == QGCMAVLink::VehicleClassMultiRotor, 0, 0, item->additionalTimeDelay(), 0, -1);
+
+            if (item->specifiesCoordinate()) {
+
+                // Keep track of the min/max AMSL altitude for entire mission so we can calculate altitude percentages in terrain status display
+                if (simpleItem) {
+                    double amslAltitude = item->amslEntryAlt();
+                    _minAMSLAltitude = std::fmin(_minAMSLAltitude, amslAltitude);
+                    _maxAMSLAltitude = std::fmax(_maxAMSLAltitude, amslAltitude);
+                } else {
+                    // Complex item
+                    double complexMinAMSLAltitude = complexItem->minAMSLAltitude();
+                    double complexMaxAMSLAltitude = complexItem->maxAMSLAltitude();
+                    _minAMSLAltitude = std::fmin(_minAMSLAltitude, complexMinAMSLAltitude);
+                    _maxAMSLAltitude = std::fmax(_maxAMSLAltitude, complexMaxAMSLAltitude);
+                }
+
+                if (!item->isStandaloneCoordinate()) {
+                    firstCoordinateItem = false;
+
+                    // Update vehicle yaw assuming direction to next waypoint and/or mission item change
+                    if (simpleItem) {
+                        double newVehicleYaw = simpleItem->specifiedVehicleYaw();
+                        if (qIsNaN(newVehicleYaw)) {
+                            // No specific vehicle yaw set. Current vehicle yaw is determined from flight path segment direction.
+                            if (simpleItem != lastFlyThroughVI) {
+                                _missionFlightStatus.vehicleYaw = lastFlyThroughVI->exitCoordinate().azimuthTo(simpleItem->coordinate());
+                            }
+                        } else {
+                            _missionFlightStatus.vehicleYaw = newVehicleYaw;
+                        }
+                        simpleItem->setMissionVehicleYaw(_missionFlightStatus.vehicleYaw);
+                    }
+
+                    if (lastFlyThroughVI != _settingsItem || linkStartToHome) {
+                        // This is a subsequent waypoint or we are forcing the first waypoint back to home
+                        double azimuth, distance, altDifference;
+
+                        _calcPrevWaypointValues(item, lastFlyThroughVI, &azimuth, &distance, &altDifference);
+                        totalHorizontalDistance += distance;
+                        item->setAltDifference(altDifference);
+                        item->setAzimuth(azimuth);
+                        item->setDistance(distance);
+                        item->setDistanceFromStart(totalHorizontalDistance);
+
+                        _missionFlightStatus.maxTelemetryDistance = qMax(_missionFlightStatus.maxTelemetryDistance, _calcDistanceToHome(item, _settingsItem));
+
+                        // Calculate time/distance
+                        double hoverTime = distance / _missionFlightStatus.hoverSpeed;
+                        double cruiseTime = distance / _missionFlightStatus.cruiseSpeed;
+                        _addTimeDistance(_missionFlightStatus.vtolMode == QGCMAVLink::VehicleClassMultiRotor, hoverTime, cruiseTime, 0, distance, item->sequenceNumber());
+                    }
+
+                    if (complexItem) {
+                        // Add in distance/time inside complex items as well
+                        double distance = complexItem->complexDistance();
+                        _missionFlightStatus.maxTelemetryDistance = qMax(_missionFlightStatus.maxTelemetryDistance, complexItem->greatestDistanceTo(complexItem->exitCoordinate()));
+
+                        double hoverTime = distance / _missionFlightStatus.hoverSpeed;
+                        double cruiseTime = distance / _missionFlightStatus.cruiseSpeed;
+                        _addTimeDistance(_missionFlightStatus.vtolMode == QGCMAVLink::VehicleClassMultiRotor, hoverTime, cruiseTime, 0, distance, item->sequenceNumber());
+
+                        totalHorizontalDistance += distance;
+                    }
+
+
+                    lastFlyThroughVI = item;
+                }
+            }
+        }
+
+        // Speed, VTOL states changes are processed last since they take affect on the next item
+
+        double newSpeed = item->specifiedFlightSpeed();
+        if (!qIsNaN(newSpeed)) {
+            if (_controllerVehicle->multiRotor()) {
+                _missionFlightStatus.hoverSpeed = newSpeed;
+            } else if (_controllerVehicle->vtol()) {
+                if (_missionFlightStatus.vtolMode == QGCMAVLink::VehicleClassMultiRotor) {
+                    _missionFlightStatus.hoverSpeed = newSpeed;
+                } else {
+                    _missionFlightStatus.cruiseSpeed = newSpeed;
+                }
+            } else {
+                _missionFlightStatus.cruiseSpeed = newSpeed;
+            }
+            _missionFlightStatus.vehicleSpeed = newSpeed;
         }
 
         // Update VTOL state
@@ -1587,94 +1672,24 @@ void MissionController::_recalcMissionFlightStatus()
             switch (simpleItem->command()) {
             case MAV_CMD_NAV_TAKEOFF:       // This will do a fixed wing style takeoff
             case MAV_CMD_NAV_VTOL_TAKEOFF:  // Vehicle goes straight up and then transitions to FW
-                vtolInHover = false;
-                break;
             case MAV_CMD_NAV_LAND:
-                vtolInHover = false;
+                _missionFlightStatus.vtolMode = QGCMAVLink::VehicleClassFixedWing;
                 break;
             case MAV_CMD_NAV_VTOL_LAND:
-                vtolInHover = true;
+                _missionFlightStatus.vtolMode = QGCMAVLink::VehicleClassMultiRotor;
                 break;
             case MAV_CMD_DO_VTOL_TRANSITION:
             {
                 int transitionState = simpleItem->missionItem().param1();
-                if (transitionState == MAV_VTOL_STATE_TRANSITION_TO_MC) {
-                    vtolInHover = true;
-                } else if (transitionState == MAV_VTOL_STATE_TRANSITION_TO_FW) {
-                    vtolInHover = false;
+                if (transitionState == MAV_VTOL_STATE_MC) {
+                    _missionFlightStatus.vtolMode = QGCMAVLink::VehicleClassMultiRotor;
+                } else if (transitionState == MAV_VTOL_STATE_FW) {
+                    _missionFlightStatus.vtolMode = QGCMAVLink::VehicleClassFixedWing;
                 }
             }
                 break;
             default:
                 break;
-            }
-        }
-
-        _addTimeDistance(vtolInHover, 0, 0, item->additionalTimeDelay(), 0, -1);
-
-        if (item->specifiesCoordinate()) {
-
-            // Keep track of the min/max AMSL altitude for entire mission so we can calculate altitude percentages in terrain status display
-            if (simpleItem) {
-                double amslAltitude = item->amslEntryAlt();
-                _minAMSLAltitude = std::min(_minAMSLAltitude, amslAltitude);
-                _maxAMSLAltitude = std::max(_maxAMSLAltitude, amslAltitude);
-            } else {
-                // Complex item
-                double complexMinAMSLAltitude = complexItem->minAMSLAltitude();
-                double complexMaxAMSLAltitude = complexItem->maxAMSLAltitude();
-                _minAMSLAltitude = std::min(_minAMSLAltitude, complexMinAMSLAltitude);
-                _maxAMSLAltitude = std::max(_maxAMSLAltitude, complexMaxAMSLAltitude);
-            }
-
-            if (!item->isStandaloneCoordinate()) {
-                firstCoordinateItem = false;
-
-                // Update vehicle yaw assuming direction to next waypoint and/or mission item change
-                if (item != lastFlyThroughVI) {
-                    if (simpleItem && !qIsNaN(simpleItem->specifiedVehicleYaw())) {
-                        vehicleYawSpecificallySet = true;
-                        _missionFlightStatus.vehicleYaw = simpleItem->specifiedVehicleYaw();
-                    } else if (!vehicleYawSpecificallySet) {
-                        _missionFlightStatus.vehicleYaw = lastFlyThroughVI->exitCoordinate().azimuthTo(item->coordinate());
-                    }
-                    lastFlyThroughVI->setMissionVehicleYaw(_missionFlightStatus.vehicleYaw);
-                }
-
-                if (lastFlyThroughVI != _settingsItem || linkStartToHome) {
-                    // This is a subsequent waypoint or we are forcing the first waypoint back to home
-                    double azimuth, distance, altDifference;
-
-                    _calcPrevWaypointValues(item, lastFlyThroughVI, &azimuth, &distance, &altDifference);
-                    totalHorizontalDistance += distance;
-                    item->setAltDifference(altDifference);
-                    item->setAzimuth(azimuth);
-                    item->setDistance(distance);
-                    item->setDistanceFromStart(totalHorizontalDistance);
-
-                    _missionFlightStatus.maxTelemetryDistance = qMax(_missionFlightStatus.maxTelemetryDistance, _calcDistanceToHome(item, _settingsItem));
-
-                    // Calculate time/distance
-                    double hoverTime = distance / _missionFlightStatus.hoverSpeed;
-                    double cruiseTime = distance / _missionFlightStatus.cruiseSpeed;
-                    _addTimeDistance(vtolInHover, hoverTime, cruiseTime, 0, distance, item->sequenceNumber());
-                }
-
-                if (complexItem) {
-                    // Add in distance/time inside complex items as well
-                    double distance = complexItem->complexDistance();
-                    _missionFlightStatus.maxTelemetryDistance = qMax(_missionFlightStatus.maxTelemetryDistance, complexItem->greatestDistanceTo(complexItem->exitCoordinate()));
-
-                    double hoverTime = distance / _missionFlightStatus.hoverSpeed;
-                    double cruiseTime = distance / _missionFlightStatus.cruiseSpeed;
-                    _addTimeDistance(vtolInHover, hoverTime, cruiseTime, 0, distance, item->sequenceNumber());
-
-                    totalHorizontalDistance += distance;
-                }
-
-                item->setMissionFlightStatus(_missionFlightStatus);
-
-                lastFlyThroughVI = item;
             }
         }
     }
@@ -1689,11 +1704,17 @@ void MissionController::_recalcMissionFlightStatus()
         double hoverTime = distance / _missionFlightStatus.hoverSpeed;
         double cruiseTime = distance / _missionFlightStatus.cruiseSpeed;
         double landTime = qAbs(altDifference) / _appSettings->offlineEditingDescentSpeed()->rawValue().toDouble();
-        _addTimeDistance(vtolInHover, hoverTime, cruiseTime, distance, landTime, -1);
+        _addTimeDistance(_missionFlightStatus.vtolMode == QGCMAVLink::VehicleClassMultiRotor, hoverTime, cruiseTime, distance, landTime, -1);
     }
 
     if (_missionFlightStatus.mAhBattery != 0 && _missionFlightStatus.batteryChangePoint == -1) {
         _missionFlightStatus.batteryChangePoint = 0;
+    }
+
+    if (linkStartToHome) {
+        // Home position is taken into account for min/max values
+        _minAMSLAltitude = std::fmin(_minAMSLAltitude, _settingsItem->plannedHomePositionAltitude()->rawValue().toDouble());
+        _maxAMSLAltitude = std::fmax(_maxAMSLAltitude, _settingsItem->plannedHomePositionAltitude()->rawValue().toDouble());
     }
 
     emit missionMaxTelemetryChanged     (_missionFlightStatus.maxTelemetryDistance);
@@ -1853,6 +1874,11 @@ void MissionController::_initAllVisualItems(void)
     for (int i=0; i<_visualItems->count(); i++) {
         VisualMissionItem* item = qobject_cast<VisualMissionItem*>(_visualItems->get(i));
         _initVisualItem(item);
+
+        TakeoffMissionItem* takeoffItem = qobject_cast<TakeoffMissionItem*>(item);
+        if (takeoffItem) {
+            _takeoffMissionItem = takeoffItem;
+        }
     }
 
     _recalcAll();
@@ -1895,7 +1921,7 @@ void MissionController::_initVisualItem(VisualMissionItem* visualItem)
     connect(visualItem, &VisualMissionItem::specifiedVehicleYawChanged,                 this, &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
     connect(visualItem, &VisualMissionItem::terrainAltitudeChanged,                     this, &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
     connect(visualItem, &VisualMissionItem::additionalTimeDelayChanged,                 this, &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
-
+    connect(visualItem, &VisualMissionItem::currentVTOLModeChanged,                     this, &MissionController::_recalcMissionFlightStatusSignal, Qt::QueuedConnection);
     connect(visualItem, &VisualMissionItem::lastSequenceNumberChanged,                  this, &MissionController::_recalcSequence);
 
     if (visualItem->isSimpleItem()) {
@@ -2135,8 +2161,10 @@ void MissionController::setDirty(bool dirty)
 
 void MissionController::_scanForAdditionalSettings(QmlObjectListModel* visualItems, PlanMasterController* masterController)
 {
-    // First we look for a Fixed Wing Landing Pattern which is at the end
-    FixedWingLandingComplexItem::scanForItem(visualItems, _flyView, masterController);
+    // First we look for a Landing Patterns which are at the end
+    if (!FixedWingLandingComplexItem::scanForItem(visualItems, _flyView, masterController)) {
+        VTOLLandingComplexItem::scanForItem(visualItems, _flyView, masterController);
+    }
 
     int scanIndex = 0;
     while (scanIndex < visualItems->count()) {
@@ -2230,7 +2258,7 @@ void MissionController::applyDefaultMissionAltitude(void)
 
 void MissionController::_progressPctChanged(double progressPct)
 {
-    if (!qFuzzyCompare(progressPct, _progressPct)) {
+    if (!QGC::fuzzyCompare(progressPct, _progressPct)) {
         _progressPct = progressPct;
         emit progressPctChanged(progressPct);
     }
@@ -2592,7 +2620,7 @@ MissionController::SendToVehiclePreCheckState MissionController::sendToVehiclePr
     if (_managerVehicle->armed() && _managerVehicle->flightMode() == _managerVehicle->missionFlightMode()) {
         return SendToVehiclePreCheckStateActiveMission;
     }
-    if (_controllerVehicle->firmwareType() != _managerVehicle->firmwareType() || _controllerVehicle->vehicleType() != _managerVehicle->vehicleType()) {
+    if (_controllerVehicle->firmwareType() != _managerVehicle->firmwareType() || QGCMAVLink::vehicleClass(_controllerVehicle->vehicleType()) != QGCMAVLink::vehicleClass(_managerVehicle->vehicleType())) {
         return SendToVehiclePreCheckStateFirwmareVehicleMismatch;
     }
     return SendToVehiclePreCheckStateOk;

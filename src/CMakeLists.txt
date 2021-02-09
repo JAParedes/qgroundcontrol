@@ -54,13 +54,13 @@ if(BUILD_TESTING)
 	add_qgc_test(CorridorScanComplexItemTest)
 	add_qgc_test(FactSystemTestGeneric)
 	add_qgc_test(FactSystemTestPX4)
-	add_qgc_test(FileDialogTest)
-	add_qgc_test(FileManagerTest)
+	#add_qgc_test(FileDialogTest)
+	#add_qgc_test(FileManagerTest)
 	add_qgc_test(FlightGearUnitTest)
 	add_qgc_test(GeoTest)
 	add_qgc_test(LinkManagerTest)
 	add_qgc_test(LogDownloadTest)
-	add_qgc_test(MessageBoxTest)
+	#add_qgc_test(MessageBoxTest)
 	add_qgc_test(MissionCommandTreeTest)
 	add_qgc_test(MissionControllerTest)
 	add_qgc_test(MissionItemTest)
@@ -70,7 +70,7 @@ if(BUILD_TESTING)
 	add_qgc_test(PlanMasterControllerTest)
 	add_qgc_test(QGCMapPolygonTest)
 	add_qgc_test(QGCMapPolylineTest)
-	add_qgc_test(RadioConfigTest)
+	#add_qgc_test(RadioConfigTest)
 	add_qgc_test(SendMavCommandTest)
 	add_qgc_test(SimpleMissionItemTest)
 	add_qgc_test(SpeedSectionTest)
@@ -142,6 +142,7 @@ add_subdirectory(Audio)
 add_subdirectory(AutoPilotPlugins)
 add_subdirectory(Camera)
 add_subdirectory(comm)
+add_subdirectory(Compression)
 add_subdirectory(FactSystem)
 add_subdirectory(FirmwarePlugin)
 add_subdirectory(FlightDisplay)
@@ -162,12 +163,12 @@ add_subdirectory(Vehicle)
 add_subdirectory(VehicleSetup)
 add_subdirectory(VideoManager)
 add_subdirectory(VideoReceiver)
-add_subdirectory(ViewWidgets)
 
 target_link_libraries(qgc
 	PRIVATE
 		shp
                 Qt5::QuickControls2
+                z # zlib
 
 	PUBLIC
 		Qt5::QuickWidgets
@@ -199,7 +200,6 @@ target_link_libraries(qgc
 		Vehicle
 		VehicleSetup
 		VideoManager
-		ViewWidgets
 )
 
 if(BUILD_TESTING)

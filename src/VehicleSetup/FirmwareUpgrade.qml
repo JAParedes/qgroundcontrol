@@ -26,7 +26,7 @@ SetupPage {
     id:             firmwarePage
     pageComponent:  firmwarePageComponent
     pageName:       qsTr("Firmware")
-    showAdvanced:   activeVehicle && activeVehicle.apmFirmware
+    showAdvanced:   globals.activeVehicle && globals.activeVehicle.apmFirmware
 
     Component {
         id: firmwarePageComponent
@@ -97,7 +97,7 @@ SetupPage {
                 property var activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
 
                 onActiveVehicleChanged: {
-                    if (!activeVehicle) {
+                    if (!globals.activeVehicle) {
                         statusTextArea.append(plugInText)
                     }
                 }
@@ -123,35 +123,25 @@ SetupPage {
                         statusTextArea.append(qgcUnplugText2)
 
                         var availableDevices = controller.availableBoardsName()
-                        if(availableDevices.length > 1) {
+                        if (availableDevices.length > 1) {
                             statusTextArea.append(highlightPrefix + qsTr("Multiple devices detected! Remove all detected devices to perform the firmware upgrade."))
                             statusTextArea.append(qsTr("Detected [%1]: ").arg(availableDevices.length) + availableDevices.join(", "))
                         }
-                        if(QGroundControl.multiVehicleManager.activeVehicle) {
-                            QGroundControl.multiVehicleManager.activeVehicle.autoDisconnect = true
+                        if (QGroundControl.multiVehicleManager.activeVehicle) {
+                            QGroundControl.multiVehicleManager.activeVehicle.vehicleLinkManager.autoDisconnect = true
                         }
                     } else {
                         // We end up here when we detect a board plugged in after we've started upgrade
                         statusTextArea.append(highlightPrefix + qsTr("Found device") + highlightSuffix + ": " + controller.boardType)
-                        if (controller.px4FlowBoard) {
-                            mainWindow.showComponentDialog(pixhawkFirmwareSelectDialogComponent, title, mainWindow.showDialogDefaultWidth, StandardButton.Ok | StandardButton.Cancel)
-                        }
                     }
                 }
 
-                onBootloaderFound: {
-                    if (controller.pixhawkBoard) {
-                        mainWindow.showComponentDialog(pixhawkFirmwareSelectDialogComponent, title, mainWindow.showDialogDefaultWidth, StandardButton.Ok | StandardButton.Cancel)
-                    }
-                }
-
-                onError: {
-                    statusTextArea.append(flashFailText)
-                }
+                onShowFirmwareSelectDlg:    mainWindow.showComponentDialog(firmwareSelectDialogComponent, title, mainWindow.showDialogDefaultWidth, StandardButton.Ok | StandardButton.Cancel)
+                onError:                    statusTextArea.append(flashFailText)
             }
 
             Component {
-                id: pixhawkFirmwareSelectDialogComponent
+                id: firmwareSelectDialogComponent
 
                 QGCViewDialog {
                     id: pixhawkFirmwareSelectDialog
@@ -245,11 +235,6 @@ SetupPage {
                         cancelFlash()
                     }
 
-                    Connections {
-                        target:         firmwarePage
-                        onCancelDialog: reject()
-                    }
-
                     ListModel {
                         id: firmwareBuildTypeList
 
@@ -318,7 +303,7 @@ SetupPage {
                             id:             mainColumn
                             anchors.left:   parent.left
                             anchors.right:  parent.right
-                            spacing:        defaultTextHeight
+                            spacing:        globals.defaultTextHeight
 
                             QGCLabel {
                                 width:      parent.width
@@ -344,7 +329,7 @@ SetupPage {
                                 QGCRadioButton {
                                     id:             px4FlightStackRadio
                                     text:           qsTr("PX4 Pro ")
-                                    textBold:       _defaultFirmwareIsPX4
+                                    font.bold:      _defaultFirmwareIsPX4
                                     checked:        _defaultFirmwareIsPX4
                                     visible:        !_singleFirmwareMode && !px4Flow && QGroundControl.apmFirmwareSupported
 
@@ -357,7 +342,7 @@ SetupPage {
                                 QGCRadioButton {
                                     id:             apmFlightStack
                                     text:           qsTr("ArduPilot")
-                                    textBold:       !_defaultFirmwareIsPX4
+                                    font.bold:      !_defaultFirmwareIsPX4
                                     checked:        !_defaultFirmwareIsPX4
                                     visible:        !_singleFirmwareMode && !px4Flow && QGroundControl.apmFirmwareSupported
 
@@ -468,7 +453,6 @@ SetupPage {
                                 visible:        showFirmwareTypeSelection
                                 textRole:       "text"
                                 model:          _singleFirmwareMode ? singleFirmwareModeTypeList : (px4Flow ? px4FlowTypeList : firmwareBuildTypeList)
-                                currentIndex:   controller.selectedFirmwareBuildType
 
                                 onActivated: {
                                     controller.selectedFirmwareBuildType = model.get(index).firmwareType
@@ -485,7 +469,7 @@ SetupPage {
                                                 qsTr("It is only intended for DEVELOPERS. ") +
                                                 qsTr("Run bench tests without props first. ") +
                                                 qsTr("Do NOT fly this without additional safety precautions. ") +
-                                                qsTr("Follow the mailing list actively when using it.")
+                                                qsTr("Follow the forums actively when using it.")
                                     } else {
                                         firmwareWarningMessageVisible = false
                                     }
@@ -502,7 +486,7 @@ SetupPage {
                         } // Column
                     } // QGCFLickable
                 } // QGCViewDialog
-            } // Component - pixhawkFirmwareSelectDialogComponent
+            } // Component - firmwareSelectDialogComponent
 
             Component {
                 id: firmwareWarningDialog
@@ -527,7 +511,7 @@ SetupPage {
                 id:         flashBootloaderButton
                 text:       qsTr("Flash ChibiOS Bootloader")
                 visible:    firmwarePage.advanced
-                onClicked:  activeVehicle.flashBootloader()
+                onClicked:  globals.activeVehicle.flashBootloader()
             }
 
             TextArea {

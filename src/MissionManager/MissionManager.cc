@@ -7,10 +7,6 @@
  *
  ****************************************************************************/
 
-
-/// @file
-///     @author Don Gagne <don@thegagnes.com>
-
 #include "MissionManager.h"
 #include "Vehicle.h"
 #include "FirmwarePlugin.h"
@@ -43,33 +39,38 @@ void MissionManager::writeArduPilotGuidedMissionItem(const QGeoCoordinate& gotoC
 
     _connectToMavlink();
 
-    mavlink_message_t       messageOut;
-    mavlink_mission_item_t  missionItem;
+    WeakLinkInterfacePtr weakLink = _vehicle->vehicleLinkManager()->primaryLink();
+    if (!weakLink.expired()) {
+        SharedLinkInterfacePtr sharedLink = weakLink.lock();
 
-    memset(&missionItem, 0, sizeof(missionItem));
-    missionItem.target_system =     _vehicle->id();
-    missionItem.target_component =  _vehicle->defaultComponentId();
-    missionItem.seq =               0;
-    missionItem.command =           MAV_CMD_NAV_WAYPOINT;
-    missionItem.param1 =            0;
-    missionItem.param2 =            0;
-    missionItem.param3 =            0;
-    missionItem.param4 =            0;
-    missionItem.x =                 gotoCoord.latitude();
-    missionItem.y =                 gotoCoord.longitude();
-    missionItem.z =                 gotoCoord.altitude();
-    missionItem.frame =             MAV_FRAME_GLOBAL_RELATIVE_ALT;
-    missionItem.current =           altChangeOnly ? 3 : 2;
-    missionItem.autocontinue =      true;
 
-    _dedicatedLink = _vehicle->priorityLink();
-    mavlink_msg_mission_item_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
-                                         qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
-                                         _dedicatedLink->mavlinkChannel(),
-                                         &messageOut,
-                                         &missionItem);
+        mavlink_message_t       messageOut;
+        mavlink_mission_item_t  missionItem;
 
-    _vehicle->sendMessageOnLinkThreadSafe(_dedicatedLink, messageOut);
+        memset(&missionItem, 0, sizeof(missionItem));
+        missionItem.target_system =     _vehicle->id();
+        missionItem.target_component =  _vehicle->defaultComponentId();
+        missionItem.seq =               0;
+        missionItem.command =           MAV_CMD_NAV_WAYPOINT;
+        missionItem.param1 =            0;
+        missionItem.param2 =            0;
+        missionItem.param3 =            0;
+        missionItem.param4 =            0;
+        missionItem.x =                 gotoCoord.latitude();
+        missionItem.y =                 gotoCoord.longitude();
+        missionItem.z =                 gotoCoord.altitude();
+        missionItem.frame =             MAV_FRAME_GLOBAL_RELATIVE_ALT;
+        missionItem.current =           altChangeOnly ? 3 : 2;
+        missionItem.autocontinue =      true;
+
+        mavlink_msg_mission_item_encode_chan(qgcApp()->toolbox()->mavlinkProtocol()->getSystemId(),
+                                             qgcApp()->toolbox()->mavlinkProtocol()->getComponentId(),
+                                             sharedLink->mavlinkChannel(),
+                                             &messageOut,
+                                             &missionItem);
+
+        _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), messageOut);
+    }
     _startAckTimeout(AckGuidedItem);
     emit inProgressChanged(true);
 }
@@ -97,11 +98,11 @@ void MissionManager::generateResumeMission(int resumeIndex)
     resumeIndex = qMax(0, qMin(resumeIndex, _missionItems.count() - 1));
 
     // Adjust resume index to be a location based command
-    const MissionCommandUIInfo* uiInfo = qgcApp()->toolbox()->missionCommandTree()->getUIInfo(_vehicle, _missionItems[resumeIndex]->command());
+    const MissionCommandUIInfo* uiInfo = qgcApp()->toolbox()->missionCommandTree()->getUIInfo(_vehicle, QGCMAVLink::VehicleClassGeneric, _missionItems[resumeIndex]->command());
     if (!uiInfo || uiInfo->isStandaloneCoordinate() || !uiInfo->specifiesCoordinate()) {
         // We have to back up to the last command which the vehicle flies through
         while (--resumeIndex > 0) {
-            uiInfo = qgcApp()->toolbox()->missionCommandTree()->getUIInfo(_vehicle, _missionItems[resumeIndex]->command());
+            uiInfo = qgcApp()->toolbox()->missionCommandTree()->getUIInfo(_vehicle, QGCMAVLink::VehicleClassGeneric, _missionItems[resumeIndex]->command());
             if (uiInfo && (uiInfo->specifiesCoordinate() && !uiInfo->isStandaloneCoordinate())) {
                 // Found it
                 break;
@@ -220,6 +221,14 @@ void MissionManager::generateResumeMission(int resumeIndex)
 void MissionManager::_mavlinkMessageReceived(const mavlink_message_t& message)
 {
     switch (message.msgid) {
+    case MAVLINK_MSG_ID_HIGH_LATENCY:
+        _handleHighLatency(message);
+        break;
+
+    case MAVLINK_MSG_ID_HIGH_LATENCY2:
+        _handleHighLatency2(message);
+        break;
+
     case MAVLINK_MSG_ID_MISSION_CURRENT:
         _handleMissionCurrent(message);
         break;
@@ -230,15 +239,11 @@ void MissionManager::_mavlinkMessageReceived(const mavlink_message_t& message)
     }
 }
 
-void MissionManager::_handleMissionCurrent(const mavlink_message_t& message)
+void MissionManager::_updateMissionIndex(int index)
 {
-    mavlink_mission_current_t missionCurrent;
-
-    mavlink_msg_mission_current_decode(&message, &missionCurrent);
-
-    if (missionCurrent.seq != _currentMissionIndex) {
-        qCDebug(MissionManagerLog) << "_handleMissionCurrent currentIndex:" << missionCurrent.seq;
-        _currentMissionIndex = missionCurrent.seq;
+    if (index != _currentMissionIndex) {
+        qCDebug(MissionManagerLog) << "_updateMissionIndex currentIndex:" << index;
+        _currentMissionIndex = index;
         emit currentIndexChanged(_currentMissionIndex);
     }
 
@@ -249,9 +254,30 @@ void MissionManager::_handleMissionCurrent(const mavlink_message_t& message)
         // to the HEARTBEAT message which contains the flight mode change which will cause things to work incorrectly. To fix this
         // We force the sequencing of HEARTBEAT following by MISSION_CURRENT by caching the possible _lastCurrentIndex update until
         // the next HEARTBEAT comes through.
-        qCDebug(MissionManagerLog) << "_handleMissionCurrent caching _lastCurrentIndex for possible update:" << _currentMissionIndex;
+        qCDebug(MissionManagerLog) << "_updateMissionIndex caching _lastCurrentIndex for possible update:" << _currentMissionIndex;
         _cachedLastCurrentIndex = _currentMissionIndex;
     }
+}
+
+void MissionManager::_handleHighLatency(const mavlink_message_t& message) 
+{
+    mavlink_high_latency_t highLatency;
+    mavlink_msg_high_latency_decode(&message, &highLatency);
+    _updateMissionIndex(highLatency.wp_num);
+}
+
+void MissionManager::_handleHighLatency2(const mavlink_message_t& message) 
+{
+    mavlink_high_latency2_t highLatency2;
+    mavlink_msg_high_latency2_decode(&message, &highLatency2);
+    _updateMissionIndex(highLatency2.wp_num);
+}
+
+void MissionManager::_handleMissionCurrent(const mavlink_message_t& message)
+{
+    mavlink_mission_current_t missionCurrent;
+    mavlink_msg_mission_current_decode(&message, &missionCurrent);
+    _updateMissionIndex(missionCurrent.seq);
 }
 
 void MissionManager::_handleHeartbeat(const mavlink_message_t& message)

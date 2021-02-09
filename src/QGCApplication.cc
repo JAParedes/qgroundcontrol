@@ -50,9 +50,7 @@
 #include "QGCPalette.h"
 #include "QGCMapPalette.h"
 #include "QGCLoggingCategory.h"
-#include "ViewWidgetController.h"
 #include "ParameterEditorController.h"
-#include "CustomCommandWidgetController.h"
 #include "ESP8266ComponentController.h"
 #include "ScreenToolsController.h"
 #include "QGCFileDialogController.h"
@@ -79,7 +77,6 @@
 #include "MAVLinkInspectorController.h"
 #endif
 #include "HorizontalFactValueGrid.h"
-#include "VerticalFactValueGrid.h"
 #include "InstrumentValueData.h"
 #include "AppMessages.h"
 #include "SimulatedPosition.h"
@@ -109,6 +106,8 @@
 #include "TerrainProfile.h"
 #include "ToolStripAction.h"
 #include "ToolStripActionList.h"
+#include "QGCMAVLink.h"
+#include "VehicleLinkManager.h"
 
 #if defined(QGC_ENABLE_PAIRING)
 #include "PairingManager.h"
@@ -169,6 +168,11 @@ static QObject* screenToolsControllerSingletonFactory(QQmlEngine*, QJSEngine*)
 {
     ScreenToolsController* screenToolsController = new ScreenToolsController;
     return screenToolsController;
+}
+
+static QObject* mavlinkSingletonFactory(QQmlEngine*, QJSEngine*)
+{
+    return new QGCMAVLink();
 }
 
 static QObject* qgroundcontrolQmlGlobalSingletonFactory(QQmlEngine*, QJSEngine*)
@@ -447,6 +451,9 @@ void QGCApplication::setLanguage()
         case 19:
             _locale = QLocale(QLocale::Turkish);
             break;
+        case 20:
+            _locale = QLocale(QLocale::Azerbaijani);
+            break;
         }
     }
     //-- We have specific fonts for Korean
@@ -490,8 +497,8 @@ void QGCApplication::_shutdown()
 {
     // Close out all Qml before we delete toolbox. This way we don't get all sorts of null reference complaints from Qml.
     delete _qmlAppEngine;
-
     delete _toolbox;
+    delete _gpsRtkFactGroup;
 }
 
 QGCApplication::~QGCApplication()
@@ -523,6 +530,8 @@ void QGCApplication::_initCommon()
     qmlRegisterUncreatableType<QGCCameraControl>        (kQGCVehicle,                       1, 0, "QGCCameraControl",           kRefOnly);
     qmlRegisterUncreatableType<QGCVideoStreamInfo>      (kQGCVehicle,                       1, 0, "QGCVideoStreamInfo",         kRefOnly);
     qmlRegisterUncreatableType<LinkInterface>           (kQGCVehicle,                       1, 0, "LinkInterface",              kRefOnly);
+    qmlRegisterUncreatableType<VehicleLinkManager>      (kQGCVehicle,                       1, 0, "VehicleLinkManager",         kRefOnly);
+
     qmlRegisterUncreatableType<MissionController>       (kQGCControllers,                   1, 0, "MissionController",          kRefOnly);
     qmlRegisterUncreatableType<GeoFenceController>      (kQGCControllers,                   1, 0, "GeoFenceController",         kRefOnly);
     qmlRegisterUncreatableType<RallyPointController>    (kQGCControllers,                   1, 0, "RallyPointController",       kRefOnly);
@@ -556,7 +565,6 @@ void QGCApplication::_initCommon()
 
     qmlRegisterUncreatableType<FactValueGrid>       (kQGCTemplates,                         1, 0, "FactValueGrid",              kRefOnly);
     qmlRegisterType<HorizontalFactValueGrid>        (kQGCTemplates,                         1, 0, "HorizontalFactValueGrid");
-    qmlRegisterType<VerticalFactValueGrid>          (kQGCTemplates,                         1, 0, "VerticalFactValueGrid");
 
     qmlRegisterType<QGCMapCircle>                   ("QGroundControl.FlightMap",            1, 0, "QGCMapCircle");
 
@@ -591,18 +599,19 @@ void QGCApplication::_initCommon()
     qmlRegisterSingletonType<QGroundControlQmlGlobal>   ("QGroundControl",                          1, 0, "QGroundControl",         qgroundcontrolQmlGlobalSingletonFactory);
     qmlRegisterSingletonType<ScreenToolsController>     ("QGroundControl.ScreenToolsController",    1, 0, "ScreenToolsController",  screenToolsControllerSingletonFactory);
     qmlRegisterSingletonType<ShapeFileHelper>           ("QGroundControl.ShapeFileHelper",          1, 0, "ShapeFileHelper",        shapeFileHelperSingletonFactory);
-}
+    qmlRegisterSingletonType<ShapeFileHelper>           ("MAVLink",                                 1, 0, "MAVLink",                mavlinkSingletonFactory);
 
-bool QGCApplication::_initForNormalAppBoot()
-{
-
+    // Although this should really be in _initForNormalAppBoot putting it here allowws us to create unit tests which pop up more easily
     if(QFontDatabase::addApplicationFont(":/fonts/opensans") < 0) {
         qWarning() << "Could not load /fonts/opensans font";
     }
     if(QFontDatabase::addApplicationFont(":/fonts/opensans-demibold") < 0) {
         qWarning() << "Could not load /fonts/opensans-demibold font";
     }
+}
 
+bool QGCApplication::_initForNormalAppBoot()
+{
     QSettings settings;
 
     _qmlAppEngine = toolbox()->corePlugin()->createQmlApplicationEngine(this);
@@ -781,7 +790,7 @@ QObject* QGCApplication::_rootQmlObject()
     return nullptr;
 }
 
-void QGCApplication::showVehicleMessage(const QString& message)
+void QGCApplication::showCriticalVehicleMessage(const QString& message)
 {
     // PreArm messages are handled by Vehicle and shown in Map
     if (message.startsWith(QStringLiteral("PreArm")) || message.startsWith(QStringLiteral("preflight"), Qt::CaseInsensitive)) {
@@ -791,10 +800,10 @@ void QGCApplication::showVehicleMessage(const QString& message)
     if (rootQmlObject) {
         QVariant varReturn;
         QVariant varMessage = QVariant::fromValue(message);
-        QMetaObject::invokeMethod(_rootQmlObject(), "showVehicleMessage", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, varMessage));
+        QMetaObject::invokeMethod(_rootQmlObject(), "showCriticalVehicleMessage", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, varMessage));
     } else if (runningUnitTests()) {
         // Unit tests can run without UI
-        qDebug() << "QGCApplication::showVehicleMessage unittest" << message;
+        qDebug() << "QGCApplication::showCriticalVehicleMessage unittest" << message;
     } else {
         qWarning() << "Internal error";
     }
@@ -811,7 +820,7 @@ void QGCApplication::showAppMessage(const QString& message, const QString& title
         QMetaObject::invokeMethod(_rootQmlObject(), "showMessageDialog", Q_RETURN_ARG(QVariant, varReturn), Q_ARG(QVariant, dialogTitle), Q_ARG(QVariant, varMessage));
     } else if (runningUnitTests()) {
         // Unit tests can run without UI
-        qDebug() << "QGCApplication::showAppMessage unittest" << message << dialogTitle;
+        qDebug() << "QGCApplication::showAppMessage unittest title:message" << dialogTitle << message;
     } else {
         // UI isn't ready yet
         _delayedAppMessages.append(QPair<QString, QString>(dialogTitle, message));
@@ -842,7 +851,7 @@ QQuickItem* QGCApplication::mainRootWindow()
 void QGCApplication::showSetupView()
 {
     if(_rootQmlObject()) {
-        QMetaObject::invokeMethod(_rootQmlObject(), "showSetupView");
+        QMetaObject::invokeMethod(_rootQmlObject(), "showSetupTool");
     }
 }
 
@@ -867,46 +876,44 @@ void QGCApplication::_checkForNewVersion()
         if (_parseVersionText(applicationVersion(), _majorVersion, _minorVersion, _buildVersion)) {
             QString versionCheckFile = toolbox()->corePlugin()->stableVersionCheckFileUrl();
             if (!versionCheckFile.isEmpty()) {
-                _currentVersionDownload = new QGCFileDownload(this);
-                connect(_currentVersionDownload, &QGCFileDownload::downloadFinished, this, &QGCApplication::_currentVersionDownloadFinished);
-                connect(_currentVersionDownload, &QGCFileDownload::error, this, &QGCApplication::_currentVersionDownloadError);
-                _currentVersionDownload->download(versionCheckFile);
+                QGCFileDownload* download = new QGCFileDownload(this);
+                connect(download, &QGCFileDownload::downloadComplete, this, &QGCApplication::_qgcCurrentStableVersionDownloadComplete);
+                download->download(versionCheckFile);
             }
         }
     }
 #endif
 }
 
-void QGCApplication::_currentVersionDownloadFinished(QString /*remoteFile*/, QString localFile)
+void QGCApplication::_qgcCurrentStableVersionDownloadComplete(QString /*remoteFile*/, QString localFile, QString errorMsg)
 {
 #ifdef __mobile__
-    Q_UNUSED(localFile);
+    Q_UNUSED(localFile)
+    Q_UNUSED(errorMsg)
 #else
-    QFile versionFile(localFile);
-    if (versionFile.open(QIODevice::ReadOnly)) {
-        QTextStream textStream(&versionFile);
-        QString version = textStream.readLine();
+    if (errorMsg.isEmpty()) {
+        QFile versionFile(localFile);
+        if (versionFile.open(QIODevice::ReadOnly)) {
+            QTextStream textStream(&versionFile);
+            QString version = textStream.readLine();
 
-        qDebug() << version;
+            qDebug() << version;
 
-        int majorVersion, minorVersion, buildVersion;
-        if (_parseVersionText(version, majorVersion, minorVersion, buildVersion)) {
-            if (_majorVersion < majorVersion ||
-                    (_majorVersion == majorVersion && _minorVersion < minorVersion) ||
-                    (_majorVersion == majorVersion && _minorVersion == minorVersion && _buildVersion < buildVersion)) {
-                //-- TODO
-                ///QGCMessageBox::information(tr("New Version Available"), tr("There is a newer version of %1 available. You can download it from %2.").arg(applicationName()).arg(toolbox()->corePlugin()->stableDownloadLocation()));
+            int majorVersion, minorVersion, buildVersion;
+            if (_parseVersionText(version, majorVersion, minorVersion, buildVersion)) {
+                if (_majorVersion < majorVersion ||
+                        (_majorVersion == majorVersion && _minorVersion < minorVersion) ||
+                        (_majorVersion == majorVersion && _minorVersion == minorVersion && _buildVersion < buildVersion)) {
+                    showAppMessage(tr("There is a newer version of %1 available. You can download it from %2.").arg(applicationName()).arg(toolbox()->corePlugin()->stableDownloadLocation()), tr("New Version Available"));
+                }
             }
         }
+    } else {
+        qDebug() << "Download QGC stable version failed" << errorMsg;
     }
 
-    _currentVersionDownload->deleteLater();
+    sender()->deleteLater();
 #endif
-}
-
-void QGCApplication::_currentVersionDownloadError(QString /*errorMsg*/)
-{
-    _currentVersionDownload->deleteLater();
 }
 
 bool QGCApplication::_parseVersionText(const QString& versionString, int& majorVersion, int& minorVersion, int& buildVersion)
@@ -962,4 +969,100 @@ QString QGCApplication::cachedAirframeMetaDataFile(void)
     QSettings settings;
     QDir airframeDir = QFileInfo(settings.fileName()).dir();
     return airframeDir.filePath(QStringLiteral("PX4AirframeFactMetaData.xml"));
+}
+
+/// Returns a signal index that is can be compared to QMetaCallEvent.signalId
+int QGCApplication::CompressedSignalList::_signalIndex(const QMetaMethod & method)
+{
+    if (method.methodType() != QMetaMethod::Signal) {
+        qWarning() << "Internal error: QGCApplication::CompressedSignalList::_signalIndex not a signal" << method.methodType();
+        return -1;
+    }
+
+    int index = -1;
+    const QMetaObject* metaObject = method.enclosingMetaObject();
+    for (int i=0; i<=method.methodIndex(); i++) {
+        if (metaObject->method(i).methodType() != QMetaMethod::Signal) {
+            continue;
+        }
+        index++;
+    }
+    return index;
+}
+
+void QGCApplication::CompressedSignalList::add(const QMetaMethod & method)
+{
+    const QMetaObject*  metaObject  = method.enclosingMetaObject();
+    int                 signalIndex = _signalIndex(method);
+
+    if (signalIndex != -1 && !contains(metaObject, signalIndex)) {
+        _signalMap[method.enclosingMetaObject()].insert(signalIndex);
+    }
+}
+
+void QGCApplication::CompressedSignalList::remove(const QMetaMethod & method)
+{
+    int                 signalIndex = _signalIndex(method);
+    const QMetaObject*  metaObject  = method.enclosingMetaObject();
+
+    if (signalIndex != -1 && _signalMap.contains(metaObject) && _signalMap[metaObject].contains(signalIndex)) {
+        _signalMap[metaObject].remove(signalIndex);
+        if (_signalMap[metaObject].count() == 0) {
+            _signalMap.remove(metaObject);
+        }
+    }
+}
+
+bool QGCApplication::CompressedSignalList::contains(const QMetaObject* metaObject, int signalIndex)
+{
+    return _signalMap.contains(metaObject) && _signalMap[metaObject].contains(signalIndex);
+}
+
+void QGCApplication::addCompressedSignal(const QMetaMethod & method)
+{
+    _compressedSignals.add(method);
+}
+
+void QGCApplication::removeCompressedSignal(const QMetaMethod & method)
+{
+    _compressedSignals.remove(method);
+}
+
+bool QGCApplication::compressEvent(QEvent*event, QObject* receiver, QPostEventList* postedEvents)
+{
+    if (event->type() != QEvent::MetaCall) {
+        return QApplication::compressEvent(event, receiver, postedEvents);
+    }
+
+    QMetaCallEvent* mce = static_cast<QMetaCallEvent*>(event);
+    if (!mce->sender() || !_compressedSignals.contains(mce->sender()->metaObject(), mce->signalId())) {
+        return QApplication::compressEvent(event, receiver, postedEvents);
+    }
+
+    for (QPostEventList::iterator it = postedEvents->begin(); it != postedEvents->end(); ++it) {
+        QPostEvent &cur = *it;
+        if (cur.receiver != receiver || cur.event == 0 || cur.event->type() != event->type()) {
+            continue;
+        }
+        QMetaCallEvent *cur_mce = static_cast<QMetaCallEvent*>(cur.event);
+        if (cur_mce->sender() != mce->sender() || cur_mce->signalId() != mce->signalId() || cur_mce->id() != mce->id()) {
+            continue;
+        }
+        /* Keep The Newest Call */
+        // We can't merely qSwap the existing posted event with the new one, since QEvent
+        // keeps track of whether it has been posted. Deletion of a formerly posted event
+        // takes the posted event list mutex and does a useless search of the posted event
+        // list upon deletion. We thus clear the QEvent::posted flag before deletion.
+        struct EventHelper : private QEvent {
+            static void clearPostedFlag(QEvent * ev) {
+                (&static_cast<EventHelper*>(ev)->t)[1] &= ~0x8001; // Hack to clear QEvent::posted
+            }
+        };
+        EventHelper::clearPostedFlag(cur.event);
+        delete cur.event;
+        cur.event = event;
+        return true;
+    }
+
+    return false;
 }

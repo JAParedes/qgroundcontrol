@@ -7,13 +7,6 @@
  *
  ****************************************************************************/
 
-
-/**
- * @file
- *   @brief Implementation of class MAVLinkProtocol
- *   @author Lorenz Meier <mail@qgroundcontrol.org>
- */
-
 #include <inttypes.h>
 #include <iostream>
 
@@ -43,8 +36,8 @@ Q_DECLARE_METATYPE(mavlink_message_t)
 
 QGC_LOGGING_CATEGORY(MAVLinkProtocolLog, "MAVLinkProtocolLog")
 
-const char* MAVLinkProtocol::_tempLogFileTemplate = "FlightDataXXXXXX"; ///< Template for temporary log file
-const char* MAVLinkProtocol::_logFileExtension = "mavlink";             ///< Extension for log files
+const char* MAVLinkProtocol::_tempLogFileTemplate   = "FlightDataXXXXXX";   ///< Template for temporary log file
+const char* MAVLinkProtocol::_logFileExtension      = "mavlink";            ///< Extension for log files
 
 /**
  * The default constructor will create a new MAVLink object sending heartbeats at
@@ -82,10 +75,10 @@ MAVLinkProtocol::~MAVLinkProtocol()
 
 void MAVLinkProtocol::setVersion(unsigned version)
 {
-    QList<LinkInterface*> links = _linkMgr->links();
+    QList<SharedLinkInterfacePtr> sharedLinks = _linkMgr->links();
 
-    for (int i = 0; i < links.length(); i++) {
-        mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(links[i]->mavlinkChannel());
+    for (int i = 0; i < sharedLinks.length(); i++) {
+        mavlink_status_t* mavlinkStatus = mavlink_get_channel_status(sharedLinks[i].get()->mavlinkChannel());
 
         // Set flags for version
         if (version < 200) {
@@ -204,15 +197,12 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
     // Since receiveBytes signals cross threads we can end up with signals in the queue
     // that come through after the link is disconnected. For these we just drop the data
     // since the link is closed.
-    if (!_linkMgr->containsLink(link)) {
+    WeakLinkInterfacePtr linkPtr = _linkMgr->sharedLinkInterfacePointerForLink(link, true);
+    if (linkPtr.expired()) {
         return;
     }
 
     uint8_t mavlinkChannel = link->mavlinkChannel();
-
-    static int  nonmavlinkCount = 0;
-    static bool checkedUserNonMavlink = false;
-    static bool warnedUserNonMavlink  = false;
 
     for (int position = 0; position < b.size(); position++) {
         if (mavlink_parse_char(mavlinkChannel, static_cast<uint8_t>(b[position]), &_message, &_status)) {
@@ -272,7 +262,7 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
             // MAVLink forwarding
             bool forwardingEnabled = _app->toolbox()->settingsManager()->appSettings()->forwardMavlink()->rawValue().toBool();
             if (forwardingEnabled) {
-                SharedLinkInterfacePointer forwardingLink = _linkMgr->mavlinkForwardingLink();
+                SharedLinkInterfacePtr forwardingLink = _linkMgr->mavlinkForwardingLink();
 
                 if (forwardingLink) {
                     uint8_t buf[MAVLINK_MAX_PACKET_LEN];
@@ -323,9 +313,13 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
                 mavlink_heartbeat_t heartbeat;
                 mavlink_msg_heartbeat_decode(&_message, &heartbeat);
                 emit vehicleHeartbeatInfo(link, _message.sysid, _message.compid, heartbeat.autopilot, heartbeat.type);
-            }
-
-            if (_message.msgid == MAVLINK_MSG_ID_HIGH_LATENCY2) {
+            } else if (_message.msgid == MAVLINK_MSG_ID_HIGH_LATENCY) {
+                _startLogging();
+                mavlink_high_latency_t highLatency;
+                mavlink_msg_high_latency_decode(&_message, &highLatency);
+                // HIGH_LATENCY does not provide autopilot or type information, generic is our safest bet
+                emit vehicleHeartbeatInfo(link, _message.sysid, _message.compid, MAV_AUTOPILOT_GENERIC, MAV_TYPE_GENERIC);
+            } else if (_message.msgid == MAVLINK_MSG_ID_HIGH_LATENCY2) {
                 _startLogging();
                 mavlink_high_latency2_t highLatency2;
                 mavlink_msg_high_latency2_decode(&_message, &highLatency2);
@@ -366,27 +360,16 @@ void MAVLinkProtocol::receiveBytes(LinkInterface* link, QByteArray b)
             // kind of inefficient, but no issue for a groundstation pc.
             // It buys as reentrancy for the whole code over all threads
             emit messageReceived(link, _message);
+
+            // Anyone handling the message could close the connection, which deletes the link,
+            // so we check if it's expired
+            if (linkPtr.expired()) {
+                break;
+            }
+
             // Reset message parsing
             memset(&_status,  0, sizeof(_status));
             memset(&_message, 0, sizeof(_message));
-        } else if (!link->decodedFirstMavlinkPacket()) {
-            // No formed message yet
-            nonmavlinkCount++;
-            if (nonmavlinkCount > 1000 && !warnedUserNonMavlink) {
-                // 1000 bytes with no mavlink message. Are we connected to a mavlink capable device?
-                if (!checkedUserNonMavlink) {
-                    link->requestReset();
-                    checkedUserNonMavlink = true;
-                } else {
-                    warnedUserNonMavlink = true;
-                    // Disconnect the link since it's some other device and
-                    // QGC clinging on to it and feeding it data might have unintended
-                    // side effects (e.g. if its a modem)
-                    qDebug() << "disconnected link" << link->getName() << "as it contained no MAVLink data";
-                    QMetaObject::invokeMethod(_linkMgr, "disconnectLink", Q_ARG( LinkInterface*, link ) );
-                    return;
-                }
-            }
         }
     }
 }
@@ -535,7 +518,7 @@ void MAVLinkProtocol::deleteTempLogFiles(void)
     QString filter(QString("*.%1").arg(_logFileExtension));
     QFileInfoList fileInfoList = tempDir.entryInfoList(QStringList(filter), QDir::Files);
 
-    for(const QFileInfo fileInfo: fileInfoList) {
+    for (const QFileInfo& fileInfo: fileInfoList) {
         QFile::remove(fileInfo.filePath());
     }
 }

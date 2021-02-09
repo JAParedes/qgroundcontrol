@@ -27,25 +27,39 @@ const char* AppSettings::kmlFileExtension =         "kml";
 const char* AppSettings::shpFileExtension =         "shp";
 const char* AppSettings::logFileExtension =         "ulg";
 
-const char* AppSettings::parameterDirectory =       "Parameters";
-const char* AppSettings::telemetryDirectory =       "Telemetry";
-const char* AppSettings::missionDirectory =         "Missions";
-const char* AppSettings::logDirectory =             "Logs";
-const char* AppSettings::videoDirectory =           "Video";
-const char* AppSettings::crashDirectory =           "CrashLogs";
+const char* AppSettings::parameterDirectory =       QT_TRANSLATE_NOOP("AppSettings", "Parameters");
+const char* AppSettings::telemetryDirectory =       QT_TRANSLATE_NOOP("AppSettings", "Telemetry");
+const char* AppSettings::missionDirectory =         QT_TRANSLATE_NOOP("AppSettings", "Missions");
+const char* AppSettings::logDirectory =             QT_TRANSLATE_NOOP("AppSettings", "Logs");
+const char* AppSettings::videoDirectory =           QT_TRANSLATE_NOOP("AppSettings", "Video");
+const char* AppSettings::photoDirectory =           QT_TRANSLATE_NOOP("AppSettings", "Photo");
+const char* AppSettings::crashDirectory =           QT_TRANSLATE_NOOP("AppSettings", "CrashLogs");
 
 DECLARE_SETTINGGROUP(App, "")
 {
     qmlRegisterUncreatableType<AppSettings>("QGroundControl.SettingsManager", 1, 0, "AppSettings", "Reference only");
     QGCPalette::setGlobalTheme(indoorPalette()->rawValue().toBool() ? QGCPalette::Dark : QGCPalette::Light);
 
-    // virtualJoystickCentralized -> virtualJoystickAutoCenterThrottle
     QSettings settings;
+
+    // These two "type" keys were changed to "class" values
+    static const char* deprecatedFirmwareTypeKey    = "offlineEditingFirmwareType";
+    static const char* deprecatedVehicleTypeKey     = "offlineEditingVehicleType";
+    if (settings.contains(deprecatedFirmwareTypeKey)) {
+        settings.setValue(deprecatedFirmwareTypeKey, QGCMAVLink::firmwareClass(static_cast<MAV_AUTOPILOT>(settings.value(deprecatedFirmwareTypeKey).toInt())));
+    }
+    if (settings.contains(deprecatedVehicleTypeKey)) {
+        settings.setValue(deprecatedVehicleTypeKey, QGCMAVLink::vehicleClass(static_cast<MAV_TYPE>(settings.value(deprecatedVehicleTypeKey).toInt())));
+    }
+
+    QStringList deprecatedKeyNames  = { "virtualJoystickCentralized",           "offlineEditingFirmwareType",   "offlineEditingVehicleType" };
+    QStringList newKeyNames         = { "virtualJoystickAutoCenterThrottle",    "offlineEditingFirmwareClass",  "offlineEditingVehicleClass" };
     settings.beginGroup(_settingsGroup);
-    QString deprecatedVirtualJoystickCentralizedKey("virtualJoystickCentralized");
-    if (settings.contains(deprecatedVirtualJoystickCentralizedKey)) {
-        settings.setValue(virtualJoystickAutoCenterThrottleName, settings.value(deprecatedVirtualJoystickCentralizedKey));
-        settings.remove(deprecatedVirtualJoystickCentralizedKey);
+    for (int i=0; i<deprecatedKeyNames.count(); i++) {
+        if (settings.contains(deprecatedKeyNames[i])) {
+            settings.setValue(newKeyNames[i], settings.value(deprecatedKeyNames[i]));
+            settings.remove(deprecatedKeyNames[i]);
+        }
     }
 
     // Instantiate savePath so we can check for override and setup default path if needed
@@ -85,8 +99,8 @@ DECLARE_SETTINGGROUP(App, "")
     connect(languageFact, &Fact::rawValueChanged, this, &AppSettings::_languageChanged);
 }
 
-DECLARE_SETTINGSFACT(AppSettings, offlineEditingFirmwareType)
-DECLARE_SETTINGSFACT(AppSettings, offlineEditingVehicleType)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingFirmwareClass)
+DECLARE_SETTINGSFACT(AppSettings, offlineEditingVehicleClass)
 DECLARE_SETTINGSFACT(AppSettings, offlineEditingCruiseSpeed)
 DECLARE_SETTINGSFACT(AppSettings, offlineEditingHoverSpeed)
 DECLARE_SETTINGSFACT(AppSettings, offlineEditingAscentSpeed)
@@ -105,6 +119,8 @@ DECLARE_SETTINGSFACT(AppSettings, savePath)
 DECLARE_SETTINGSFACT(AppSettings, useChecklist)
 DECLARE_SETTINGSFACT(AppSettings, enforceChecklist)
 DECLARE_SETTINGSFACT(AppSettings, mapboxToken)
+DECLARE_SETTINGSFACT(AppSettings, mapboxAccount)
+DECLARE_SETTINGSFACT(AppSettings, mapboxStyle)
 DECLARE_SETTINGSFACT(AppSettings, esriToken)
 DECLARE_SETTINGSFACT(AppSettings, defaultFirmwareType)
 DECLARE_SETTINGSFACT(AppSettings, gstDebugLevel)
@@ -120,6 +136,7 @@ DECLARE_SETTINGSFACT(AppSettings, saveCsvTelemetry)
 DECLARE_SETTINGSFACT(AppSettings, firstRunPromptIdsShown)
 DECLARE_SETTINGSFACT(AppSettings, forwardMavlink)
 DECLARE_SETTINGSFACT(AppSettings, forwardMavlinkHostName)
+DECLARE_SETTINGSFACT(AppSettings, useComponentInformationQuery)
 
 DECLARE_SETTINGSFACT_NO_FUNC(AppSettings, indoorPalette)
 {
@@ -147,6 +164,7 @@ void AppSettings::_checkSavePathDirectories(void)
         savePathDir.mkdir(missionDirectory);
         savePathDir.mkdir(logDirectory);
         savePathDir.mkdir(videoDirectory);
+        savePathDir.mkdir(photoDirectory);
         savePathDir.mkdir(crashDirectory);
     }
 }
@@ -206,6 +224,16 @@ QString AppSettings::videoSavePath(void)
     return QString();
 }
 
+QString AppSettings::photoSavePath(void)
+{
+    QString path = savePath()->rawValue().toString();
+    if (!path.isEmpty() && QDir(path).exists()) {
+        QDir dir(path);
+        return dir.filePath(photoDirectory);
+    }
+    return QString();
+}
+
 QString AppSettings::crashSavePath(void)
 {
     QString path = savePath()->rawValue().toString();
@@ -214,29 +242,6 @@ QString AppSettings::crashSavePath(void)
         return dir.filePath(crashDirectory);
     }
     return QString();
-}
-
-MAV_AUTOPILOT AppSettings::offlineEditingFirmwareTypeFromFirmwareType(MAV_AUTOPILOT firmwareType)
-{
-    if (firmwareType != MAV_AUTOPILOT_PX4 && firmwareType != MAV_AUTOPILOT_ARDUPILOTMEGA) {
-        firmwareType = MAV_AUTOPILOT_GENERIC;
-    }
-    return firmwareType;
-}
-
-MAV_TYPE AppSettings::offlineEditingVehicleTypeFromVehicleType(MAV_TYPE vehicleType)
-{
-    if (QGCMAVLink::isRover(vehicleType)) {
-        return MAV_TYPE_GROUND_ROVER;
-    } else if (QGCMAVLink::isSub(vehicleType)) {
-        return MAV_TYPE_SUBMARINE;
-    } else if (QGCMAVLink::isVTOL(vehicleType)) {
-        return MAV_TYPE_VTOL_QUADROTOR;
-    } else if (QGCMAVLink::isFixedWing(vehicleType)) {
-        return MAV_TYPE_FIXED_WING;
-    } else {
-        return MAV_TYPE_QUADROTOR;
-    }
 }
 
 QList<int> AppSettings::firstRunPromptsIdsVariantToList(const QVariant& firstRunPromptIds)
