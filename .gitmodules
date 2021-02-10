@@ -11,6 +11,6 @@
 	path = libs/xz-embedded
 	url = https://github.com/Auterion/xz-embedded.git
 [submodule "libs/mavlink/include/mavlink/c_library_v2"]
-	path = libs/mavlink/include/mavlink/v2
+	path = libs/mavlink/include/mavlink/v2.0
 	url = https://github.com/JAParedes/c_library_v2.git
 	branch = mavlink_rcac

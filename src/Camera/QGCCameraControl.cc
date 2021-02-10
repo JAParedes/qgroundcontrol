@@ -1179,8 +1179,8 @@ QGCCameraControl::_requestAllParameters()
         mavlink_message_t msg;
         mavlink_msg_param_ext_request_list_pack_chan(
                     static_cast<uint8_t>(mavlink->getSystemId()),
-                    static_cast<uint8_t>(mavlink->getComponentId()),
-                    sharedLink->mavlinkChannel(),
+                    //static_cast<uint8_t>(mavlink->getComponentId()),
+                    //sharedLink->mavlinkChannel(),
                     &msg,
                     static_cast<uint8_t>(_vehicle->id()),
                     static_cast<uint8_t>(compID()),
