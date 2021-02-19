@@ -1183,8 +1183,8 @@ QGCCameraControl::_requestAllParameters()
                     sharedLink->mavlinkChannel(),
                     &msg,
                     static_cast<uint8_t>(_vehicle->id()),
-                    static_cast<uint8_t>(compID()),
-                    0);                                                 // trimmed messages = false
+                    static_cast<uint8_t>(compID()));//, //JUAN: Made changes for common
+                    //0);                                                 // trimmed messages = false
         _vehicle->sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
     }
     qCDebug(CameraControlVerboseLog) << "Request all parameters";
