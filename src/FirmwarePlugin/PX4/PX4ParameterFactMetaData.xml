@@ -5050,11 +5050,17 @@ the setpoint will be capped to MPC_XY_VEL_MAX</short_desc>
       <min>-10</min>
       <max>10</max>
     </parameter>
-    <parameter default="0.005" name="MPC_RCAC_POS_P0" type="FLOAT">
-      <short_desc>P0 for the position controller</short_desc>
-      <min>0.0</min>
-      <max>10.0</max>
-      <decimal>8</decimal>
+    <parameter default="-1.0" name="MPC_RCAC_ATT_SW" type="FLOAT">
+      <short_desc>RCAC Attitude switches</short_desc>
+      <long_desc>Specifies RCAC state.</long_desc>
+      <min>-10</min>
+      <max>10</max>
+    </parameter>
+    <parameter default="-1.0" name="MPC_RCAC_RATE_SW" type="FLOAT">
+      <short_desc>RCAC Rate switches</short_desc>
+      <long_desc>Specifies RCAC state.</long_desc>
+      <min>-10</min>
+      <max>10</max>
     </parameter>
     <parameter default="1.0" name="MPC_RCAC_POS_SW" type="FLOAT">
       <short_desc>RCAC Position switches</short_desc>
@@ -5062,30 +5068,23 @@ the setpoint will be capped to MPC_XY_VEL_MAX</short_desc>
       <min>-10</min>
       <max>10</max>
     </parameter>
-    <parameter default="0.001" name="MPC_RCAC_VEL_P0" type="FLOAT">
-      <short_desc>P0 for the velocity controller</short_desc>
-      <min>0.0</min>
-      <max>10.0</max>
-      <decimal>8</decimal>
-    </parameter>
     <parameter default="1.0" name="MPC_RCAC_VEL_SW" type="FLOAT">
       <short_desc>RCAC Velocity switches</short_desc>
       <long_desc>Specifies RCAC state.</long_desc>
       <min>-10</min>
       <max>10</max>
     </parameter>
-    </parameter>
-	<parameter default="0.01" name="MPC_RCAC_ATT_P0" type="FLOAT">
+    <parameter default="0.01" name="MPC_RCAC_ATT_P0" type="FLOAT">
       <short_desc>P0 for the Attitude controller</short_desc>
       <min>0.0</min>
       <max>10.0</max>
       <decimal>8</decimal>
     </parameter>
-    <parameter default="-1.0" name="MPC_RCAC_ATT_SW" type="FLOAT">
-      <short_desc>RCAC Attitude switches</short_desc>
-      <long_desc>Specifies RCAC state.</long_desc>
-      <min>-10</min>
-      <max>10</max>
+    <parameter default="0.01" name="MPC_RCAC_ATT_RU" type="FLOAT">
+      <short_desc>Ru for the Attitude controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
     </parameter>
     <parameter default="0.001" name="MPC_RCAC_RATE_P0" type="FLOAT">
       <short_desc>P0 for the Rate controller</short_desc>
@@ -5093,11 +5092,35 @@ the setpoint will be capped to MPC_XY_VEL_MAX</short_desc>
       <max>10.0</max>
       <decimal>8</decimal>
     </parameter>
-    <parameter default="-1.0" name="MPC_RCAC_RATE_SW" type="FLOAT">
-      <short_desc>RCAC Rate switches</short_desc>
-      <long_desc>Specifies RCAC state.</long_desc>
-      <min>-10</min>
-      <max>10</max>
+    <parameter default="0.001" name="MPC_RCAC_RATE_RU" type="FLOAT">
+      <short_desc>Ru for the Rate controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="0.005" name="MPC_RCAC_POS_P0" type="FLOAT">
+      <short_desc>P0 for the position controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="0.005" name="MPC_RCAC_POS_RU" type="FLOAT">
+      <short_desc>Ru for the position controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="0.001" name="MPC_RCAC_VEL_P0" type="FLOAT">
+      <short_desc>P0 for the velocity controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
+    </parameter>
+    <parameter default="0.001" name="MPC_RCAC_VEL_RU" type="FLOAT">
+      <short_desc>Ru for the velocity controller</short_desc>
+      <min>0.0</min>
+      <max>10.0</max>
+      <decimal>8</decimal>
     </parameter>
   </group>
   <group name="Multicopter Rate Control">
