@@ -1,0 +1,2 @@
+DEFINES += DISABLE_AIRMAP
+MAVLINK_CONF = ardupilotmega_rcac
