@@ -32,6 +32,7 @@ struct APMPlaneMode
         THERMAL       = 24,
         LOITER2QLAND  = 25,
         AUTOLAND      = 26,
+        PCAC          = 27,
     };
 };
 
@@ -81,6 +82,7 @@ protected:
     const QString _thermalFlightMode = tr("Thermal");
     const QString _loiter2qlandFlightMode = tr("Loiter to QLand");
     const QString _autolandFlightMode = tr("Autoland");
+    const QString _pcacFlightMode = tr("PCAC");
 
 private:
     static bool _remapParamNameIntialized;

@@ -79,6 +79,7 @@ QString _ardupilotModeName(const QString &vehicleType, int modeNumber)
         {24, QStringLiteral("THERMAL")},
         {25, QStringLiteral("Loiter to QLand")},
         {26, QStringLiteral("AUTOLAND")},
+        {27, QStringLiteral("PCAC")},
     };
     static const QHash<int, QString> copterModes = {
         {0, QStringLiteral("Stabilize")},

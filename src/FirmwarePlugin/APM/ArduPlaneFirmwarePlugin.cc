@@ -34,6 +34,7 @@ ArduPlaneFirmwarePlugin::ArduPlaneFirmwarePlugin(QObject *parent)
         { APMPlaneMode::THERMAL       , _thermalFlightMode      },
         { APMPlaneMode::LOITER2QLAND  , _loiter2qlandFlightMode },
         { APMPlaneMode::AUTOLAND      , _autolandFlightMode     },
+        { APMPlaneMode::PCAC          , _pcacFlightMode         },
 
     });
 
@@ -65,6 +66,7 @@ ArduPlaneFirmwarePlugin::ArduPlaneFirmwarePlugin(QObject *parent)
         { _thermalFlightMode      , APMPlaneMode::THERMAL       , true , true },
         { _loiter2qlandFlightMode , APMPlaneMode::LOITER2QLAND  , true , true },
         { _autolandFlightMode     , APMPlaneMode::AUTOLAND      , true , true },
+        { _pcacFlightMode         , APMPlaneMode::PCAC      , true , true },
     };
     updateAvailableFlightModes(availableFlightModes);
 

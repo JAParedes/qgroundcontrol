@@ -3339,136 +3339,140 @@ Please place your vehicle in water, click the button, and wait. Note that the th
     </message>
   </context>
   <context>
-    <name>ArduPlaneFirmwarePlugin</name>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="58"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="59"/>
       <source>Manual</source>
       <translation type="unfinished">Manual</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="59"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="60"/>
       <source>Circle</source>
       <translation type="unfinished">Circle</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="60"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="61"/>
       <source>Stabilize</source>
       <translation type="unfinished">Stabilize</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="61"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="62"/>
       <source>Training</source>
       <translation type="unfinished">Training</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="62"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="63"/>
       <source>Acro</source>
       <translation type="unfinished">Acro</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="63"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="64"/>
       <source>FBW A</source>
       <translation type="unfinished">FBW A</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="64"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="65"/>
       <source>FBW B</source>
       <translation type="unfinished">FBW B</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="65"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="66"/>
       <source>Cruise</source>
       <translation type="unfinished">Cruise</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="66"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="67"/>
       <source>Autotune</source>
       <translation type="unfinished">Autotune</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="67"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="68"/>
       <source>Auto</source>
       <translation type="unfinished">Auto</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="68"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="69"/>
       <source>RTL</source>
       <translation type="unfinished">RTL</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="69"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="70"/>
       <source>Loiter</source>
       <translation type="unfinished">Loiter</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="70"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="71"/>
       <source>Takeoff</source>
       <translation type="unfinished">Takeoff</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="71"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="72"/>
       <source>Avoid ADSB</source>
       <translation type="unfinished">Avoid ADSB</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="72"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="73"/>
       <source>Guided</source>
       <translation type="unfinished">Guided</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="73"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="74"/>
       <source>Initializing</source>
       <translation type="unfinished">Initializing</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="74"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="75"/>
       <source>QuadPlane Stabilize</source>
       <translation type="unfinished">QuadPlane Stabilize</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="75"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="76"/>
       <source>QuadPlane Hover</source>
       <translation type="unfinished">QuadPlane Hover</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="76"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="77"/>
       <source>QuadPlane Loiter</source>
       <translation type="unfinished">QuadPlane Loiter</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="77"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="78"/>
       <source>QuadPlane Land</source>
       <translation type="unfinished">QuadPlane Land</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="78"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="79"/>
       <source>QuadPlane RTL</source>
       <translation type="unfinished">QuadPlane RTL</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="79"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="80"/>
       <source>QuadPlane AutoTune</source>
       <translation type="unfinished">QuadPlane AutoTune</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="80"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="81"/>
       <source>QuadPlane Acro</source>
       <translation type="unfinished">QuadPlane Acro</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="81"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="82"/>
       <source>Thermal</source>
       <translation type="unfinished">Thermal</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="82"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="83"/>
       <source>Loiter to QLand</source>
       <translation type="unfinished">Loiter to QLand</translation>
     </message>
     <message>
-      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="83"/>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="84"/>
       <source>Autoland</source>
       <translation type="unfinished">Autoland</translation>
+    </message>
+    <message>
+      <location filename="../src/FirmwarePlugin/APM/ArduPlaneFirmwarePlugin.h" line="85"/>
+      <source>PCAC</source>
+      <translation type="unfinished">PCAC</translation>
     </message>
   </context>
   <context>
